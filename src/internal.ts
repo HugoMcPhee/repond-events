@@ -51,7 +51,8 @@ export function getLiveIdsForGroup(state: AllState, group: string) {
 
 export function getLiveEventsIdsUpToLiveEventId(state: AllState, liveId: string) {
   const chainId = getChainIdFromLiveEventId(state, liveId);
-  if (!chainId) return console.warn(`no chain found for ${liveId}`), [];
+  // `no chain found for ${liveId}`
+  if (!chainId) return [];
   const chainState = state.chains[chainId];
   const liveIds = chainState?.liveEventIds ?? [];
   const eventIndex = liveIds.indexOf(liveId);
@@ -174,10 +175,9 @@ export function finalizeEvent(liveEventId: string) {
       const liveEventState = state.liveEvents[liveEventId];
       if (!liveEventState) return console.warn(`no liveEvent found for ${liveEventId}`), {};
       const chainId = liveEventState.chainId;
-      if (!chainId) return console.warn(`no chain found for ${liveEventId}`), {};
-
+      if (!chainId) return {}; // `no chain found for ${liveEventId}`
       const chainState = state.chains[chainId];
-      if (!chainState) return console.warn(`no chain found for ${chainId}`), {};
+      if (!chainState) return {}; // `no chain found for ${chainId}`
 
       // Remove this liveEventId from the chain
       const newLiveEventIds = chainState.liveEventIds.filter((id) => id !== liveEventId);
@@ -345,12 +345,12 @@ export function _getStatesToRunEventsInMode({
   } else if (chainId && !targetLiveIds) {
     const chainState = state.chains[chainId];
     targetLiveIds = chainState?.liveEventIds;
-    if (!targetLiveIds) return console.warn(`no liveEventIds found for chain ${chainId}`), {};
+    if (!targetLiveIds) return {}; // `no liveEventIds found for chain ${chainId}`
     liveIdsByChain[chainId] = [...targetLiveIds];
   } else if (!chainId && targetLiveIds) {
     for (const liveId of targetLiveIds) {
       const chainId = getChainIdFromLiveEventId(state, liveId);
-      if (!chainId) return console.warn(`no chain found for ${liveId}`), {};
+      if (!chainId) return {}; // `no chain found for ${liveId}`
       if (!liveIdsByChain[chainId]) liveIdsByChain[chainId] = [];
       liveIdsByChain[chainId]!.push(liveId);
     }

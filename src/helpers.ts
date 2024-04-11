@@ -115,7 +115,8 @@ export function chainDo(runMode: RunMode, chainId: string, runOptions?: RunModeE
 export function chainWithEventDo(runMode: RunMode, liveId: string, runOptions?: RunModeExtraOptions) {
   setState((state) => {
     const chainId = getChainIdFromLiveEventId(state, liveId);
-    if (!chainId) return console.warn(`no chain found for ${liveId}`), undefined;
+    // `no chain found for ${liveId}`
+    if (!chainId) return undefined;
     return _getStatesToRunEventsInMode({ state, runMode, chainId, runOptions });
   });
 }
