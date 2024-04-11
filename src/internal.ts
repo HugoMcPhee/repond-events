@@ -240,6 +240,10 @@ export function _makeLiveIdFromEventInstance(event: EventInstance) {
   );
 }
 
+export function makeNewChainId() {
+  return `chain_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+}
+
 export function eventInstanceToEventNode(eventInstance: EventInstance): EventNodeLoose {
   return {
     group: eventInstance.group,
@@ -260,7 +264,7 @@ function getEventTypeDefinition(group: string, name: string) {
 }
 
 export function _addEvents(eventIntances: EventInstance[], options: EventInstanceOptions) {
-  const chainId = options.chainId ?? repondEventsMeta.defaultChainName;
+  const chainId = options.chainId ?? repondEventsMeta.defaultChainId ?? makeNewChainId();
   onNextTick(() => {
     const events = eventIntances.map((event) => {
       const eventType = getEventTypeDefinition(event.group, event.name);

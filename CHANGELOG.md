@@ -1,5 +1,9 @@
 TODO
 
+v0.1.2
+
+- Supports optional default chain id, so all new chains can get a random id
+
 v0.1.1
 
 - Removed some warnings since chainDo could be called on removed chains

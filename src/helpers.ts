@@ -179,9 +179,11 @@ export function initEventTypeGroups<
   groups: T,
   options?: {
     defaultElapsedTimePath?: TimePathArray<T_TimePathItemType, T_TimePathItemId>;
+    defaultChainId?: string; // leave undefined to generate a random name for each chain
   }
 ): T {
   repondEventsMeta.defaultElapsedTimePath = options?.defaultElapsedTimePath ?? null;
+  repondEventsMeta.defaultChainId = options?.defaultChainId ?? null;
   const transformedGroups: Record<string, ReturnType<typeof makeEventTypes>> = {};
 
   Object.entries(groups).forEach(([key, value]) => {
