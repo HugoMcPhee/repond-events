@@ -147,7 +147,7 @@ export function runEventHandler(liveEventId: string) {
     runBy: "repond-events",
     addedBy: liveEventState.addedBy ?? "unknown",
     runMode,
-    didStart: false, // a little different to isActive, if it started at all?
+    didStart: (liveEventState.startTime ?? 0) > 0, // a little different to isActive, if it started at all?
     chainId: liveEventState.chainId,
     liveId: liveEventState.id,
     remainingTime: 0,

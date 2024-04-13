@@ -1,5 +1,9 @@
 TODO
 
+v0.1.4
+
+- Uses real value for didStart in liveInfo
+
 v0.1.3
 
 - Supports optionall loosely typing chainId
