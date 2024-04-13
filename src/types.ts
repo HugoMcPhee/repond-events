@@ -12,6 +12,11 @@ export type TimePathArray<T_ItemType extends ItemType, T_ItemId extends keyof Al
   keyof AllState[T_ItemType][T_ItemId] & string
 ];
 
+type StringWithAutocomplete<T> = T | (string & Record<never, never>);
+
+export type KnownChainId = RepondEventsTypes["KnownChainIds"];
+export type ChainId = StringWithAutocomplete<KnownChainId>;
+
 export type RunMode = "add" | "start" | "end" | "pause" | "unpause" | "suspend" | "unsuspend" | "cancel" | "skip";
 
 // For some helpers
@@ -28,7 +33,7 @@ export type EventNodeLoose = { group: string; name: string; params?: Record<any,
 export type EventNodeLooseWithOptions = EventNodeLoose & { options?: EventInstanceOptions };
 
 export type EventInstanceOptions = {
-  chainId?: string;
+  chainId?: ChainId;
   liveId?: string;
   addedBy?: string;
   isParallel?: boolean;
@@ -61,7 +66,7 @@ export type EasyEventInstance = [string, string, Record<any, any>, EventInstance
 
 export type EventRunLiveInfo = {
   liveId: string;
-  chainId: string;
+  chainId: ChainId;
   runBy: string;
   addedBy: string;
   runMode: RunMode;

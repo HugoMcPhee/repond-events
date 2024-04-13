@@ -13,12 +13,14 @@ import {
 } from "./internal";
 import { repondEventsMeta } from "./meta";
 import {
+  ChainId,
   EventGroupName,
   EventInstanceOptions,
   EventName,
   EventTuple,
   EventTypeDefinition,
   ItemState,
+  KnownChainId,
   ParamsType,
   RunMode,
   RunModeExtraOptions,
@@ -40,7 +42,7 @@ export function toDo<T_Group extends EventGroupName, T_Name extends EventName<T_
   return eventTuple;
 }
 
-export function getChainState(chainId: string) {
+export function getChainState(chainId: ChainId) {
   return getState().chains[chainId];
 }
 
@@ -52,7 +54,7 @@ export function setLiveEventState(liveEventId: string, state: Partial<ItemState<
   setState({ liveEvents: { [liveEventId]: state } });
 }
 
-export function setChainState(chainId: string, state: Partial<ItemState<"chains">>) {
+export function setChainState(chainId: ChainId, state: Partial<ItemState<"chains">>) {
   setState({ chains: { [chainId]: state } });
 }
 
@@ -106,7 +108,7 @@ export function eventDo(runMode: RunMode, liveId: string, runOptions?: RunModeEx
   });
 }
 
-export function chainDo(runMode: RunMode, chainId: string, runOptions?: RunModeExtraOptions) {
+export function chainDo(runMode: RunMode, chainId: ChainId, runOptions?: RunModeExtraOptions) {
   onNextTick(() => {
     setState((state) => _getStatesToRunEventsInMode({ state, runMode, chainId, runOptions }));
   });

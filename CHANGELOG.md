@@ -1,5 +1,10 @@
 TODO
 
+v0.1.3
+
+- Supports optionall loosely typing chainId
+- removed unused meta.eventTickCount
+
 v0.1.2
 
 - Supports optional default chain id, so all new chains can get a random id

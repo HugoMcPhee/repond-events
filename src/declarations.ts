@@ -1,5 +1,6 @@
 export interface RepondEventsTypesUntyped {
   EventGroups: Record<string, Record<string, any>>;
+  KnownChainIds: string;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
