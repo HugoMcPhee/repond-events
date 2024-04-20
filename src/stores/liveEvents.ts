@@ -9,12 +9,11 @@ const state = () => ({
   addedBy: null as null | string, // incase it's useful to know where an event was added from (for multiplayer or if it was added automatically etc)
   runBy: null as null | string, // an optional string to identify who is ran the runMode the event, e.g "player1" or "saveGame"
   // Run types
-  goalRunModeOptions: null as RunModeOptions | null, // this gets set, but depending on the runMode, it will be set to nowRunMode or runModeWhenReady
   nowRunMode: null as RunMode | null, // when this changes, the run handler runs
   runModeOptionsWhenReady: null as RunModeOptions | null, // the run type it should do instead of start when it's ready, for now only "skip"
   runModeBeforePause: null as RunMode | null, // store the runMode before it was paused, so it can be resumed
   runModeBeforeSuspend: null as RunMode | null, // store the runMode before it was suspended, so it can be resumed
-  // Times - note all are relative to the elpasedTime path
+  // Times - note all are relative to the elpasedTime path time
   addTime: null as null | number, // when it was added
   readyTime: null as null | number, // when it's ready to start, when its finished waiting in the chain
   startTime: null as null | number, // this is so when skipping a chain, it can act differently depending on if it started or directly skipped

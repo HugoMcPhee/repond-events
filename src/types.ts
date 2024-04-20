@@ -39,6 +39,7 @@ export type EventInstanceOptions = {
   isParallel?: boolean;
   timePath?: TimePathArray<ItemType, keyof AllState[ItemType]>;
   hasPriority?: boolean; // if the event should be run before other inactive events
+  duration?: number; // in ms, this can always be changed by the event handler, defaults to 0
 };
 
 // For EventInstanceOptionsWithChainId, make 'chainId' non-optional
@@ -77,6 +78,10 @@ export type EventRunLiveInfo = {
   isUnsuspending: boolean;
   isUnfreezing: boolean;
   isFreezing: boolean;
+  isFirstAdd: boolean;
+  isFirstStart: boolean;
+  isFirstPause: boolean;
+  isFirstSuspend: boolean;
   // times from state
   addTime: number;
   startTime: number;
@@ -105,7 +110,7 @@ export type RefinedEventGroups = {
 export type EventGroupName = keyof RefinedEventGroups & string;
 export type EventName<T extends EventGroupName> = keyof RefinedEventGroups[T] & string;
 type EventGroups = RefinedEventGroups;
-export type ParamsType<
+export type EventParamsType<
   T_Group extends EventGroupName & string,
   T_Name extends EventName<T_Group> & string
 > = RefinedEventGroups[T_Group][T_Name] extends { params: infer P }
@@ -116,6 +121,6 @@ export type ParamsType<
 
 export type EventTuple = {
   [G in EventGroupName]: {
-    [N in EventName<G>]: [G, N, ParamsType<G, N>] | [G, N, ParamsType<G, N>, EventInstanceOptions];
+    [N in EventName<G>]: [G, N, EventParamsType<G, N>] | [G, N, EventParamsType<G, N>, EventInstanceOptions];
   }[EventName<G>];
 }[EventGroupName];

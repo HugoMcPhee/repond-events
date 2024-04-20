@@ -1,5 +1,16 @@
 TODO
 
+v0.1.5
+
+- Supports having sub chains for liveEvents, where when the subchain is finishes, the liveEvent finishes
+  - Adding a "liveId" to runEvents options will make it subchain, or using addSubChain(liveId, events, otions
+- Added "isFirstAdd" to liveInfo, to know if it's a the first time the liveEvent is added, since unpausing/unsuspending can cause the "add" handler to be called again, if the liveEvents runMode was "add" before pausing/suspending,
+  - "isFirstAdd" can be used to add subEvents once
+  - Also added "isFirstStart", "isFirstPause" and "isFirstSuspend" to liveInfo
+- Supports setting a duration in live event options
+- Exports some useful types from the library
+- Removed liveState.goalRunModeOptions
+
 v0.1.4
 
 - Uses real value for didStart in liveInfo

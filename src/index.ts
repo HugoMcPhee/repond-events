@@ -11,6 +11,7 @@ export {
   runEvent,
   runPriorityEvent,
   runEvents,
+  addSubEvents,
   runPriorityEvents,
   eventDo,
   chainDo,
@@ -24,6 +25,26 @@ export {
   makeEventTypes,
   initEventTypeGroups,
 } from "./helpers";
+
+export type {
+  ChainId,
+  EventInstance,
+  EventInstanceOptions,
+  EventNodeLoose,
+  EventNodeLooseWithOptions,
+  EventRunLiveInfo,
+  EasyEventInstance,
+  RunModeExtraOptions,
+  RunModeOptions,
+  TimePathArray,
+  KnownChainId,
+  RunMode,
+  EventGroupName,
+  EventName,
+  EventTypeDefinition,
+  EventTuple,
+  EventParamsType,
+} from "./types";
 
 export const repondEventsStores = {
   liveEvents,

@@ -21,7 +21,7 @@ import {
   EventTypeDefinition,
   ItemState,
   KnownChainId,
-  ParamsType,
+  EventParamsType,
   RunMode,
   RunModeExtraOptions,
   TimePathArray,
@@ -34,7 +34,7 @@ import {
 export function toDo<T_Group extends EventGroupName, T_Name extends EventName<T_Group>>(
   group: T_Group,
   name: T_Name,
-  params: ParamsType<T_Group, T_Name>,
+  params: EventParamsType<T_Group, T_Name>,
   options?: EventInstanceOptions
 ) {
   const eventTuple: EventTuple = [group, name, params, options] as EventTuple;
@@ -68,7 +68,7 @@ export function setChainState(chainId: ChainId, state: Partial<ItemState<"chains
 export function runEvent<T_Group extends EventGroupName, T_Name extends EventName<T_Group>>(
   group: T_Group,
   name: T_Name,
-  params: ParamsType<T_Group, T_Name>,
+  params: EventParamsType<T_Group, T_Name>,
   options?: EventInstanceOptions
 ) {
   const eventInstance = eventNodeToEventInstance({ group, name, params: params ?? {} }, options);
@@ -80,7 +80,7 @@ export function runEvent<T_Group extends EventGroupName, T_Name extends EventNam
 export function runPriorityEvent<T_Group extends EventGroupName, T_Name extends EventName<T_Group>>(
   group: T_Group,
   name: T_Name,
-  params: ParamsType<T_Group, T_Name>,
+  params: EventParamsType<T_Group, T_Name>,
   options: EventInstanceOptions
 ) {
   // NOTE _addEvent runs _addEvents which has onNextTick inside
@@ -90,8 +90,18 @@ export function runPriorityEvent<T_Group extends EventGroupName, T_Name extends 
 
 export function runEvents<T_Events extends EventTuple[]>(eventsToRun: T_Events, options?: EventInstanceOptions) {
   // NOTE _addEvents has onNextTick inside
+
+  // NOTE adding a liveId will make the chain a subChain of the liveEvent
   const chainId = _addEvents(eventTuplesToEventInstances(eventsToRun), { ...options });
   return chainId;
+}
+
+export function addSubEvents<T_Events extends EventTuple[]>(
+  liveId: string,
+  eventsToRun: T_Events,
+  options?: EventInstanceOptions
+) {
+  runEvents(eventsToRun, { liveId, ...options });
 }
 
 export function runPriorityEvents<T_Events extends EventTuple[]>(

@@ -143,6 +143,9 @@ export function runEventHandler(liveEventId: string) {
   const isUnfreezing = isUnpausing || isUnsuspending;
   const isFreezing = runMode === "pause" || runMode === "suspend";
 
+  const unpauseTime = liveEventState.unpauseTime ?? 0;
+  const unsuspendTime = liveEventState.unsuspendTime ?? 0;
+
   const liveInfo: EventRunLiveInfo = {
     runBy: "repond-events",
     addedBy: liveEventState.addedBy ?? "unknown",
@@ -156,12 +159,16 @@ export function runEventHandler(liveEventId: string) {
     isUnsuspending,
     isUnfreezing,
     isFreezing,
+    isFirstAdd: runMode === "add" && !isUnfreezing,
+    isFirstStart: runMode === "start" && !isUnfreezing,
+    isFirstPause: runMode === "pause" && !unpauseTime,
+    isFirstSuspend: runMode === "suspend" && !unsuspendTime,
     addTime: liveEventState.addTime ?? 0,
     startTime: liveEventState.startTime ?? 0,
     pauseTime: liveEventState.pauseTime ?? 0,
-    unpauseTime: liveEventState.unpauseTime ?? 0,
+    unpauseTime,
     suspendTime: liveEventState.suspendTime ?? 0,
-    unsuspendTime: liveEventState.unsuspendTime ?? 0,
+    unsuspendTime,
     goalEndTime: liveEventState.goalEndTime ?? 0,
   };
 
@@ -196,11 +203,13 @@ function _makeLiveEventStateFromEvent(event: EventInstanceWithIds): ItemState<"l
   if (foundElapsedTimeStatePath) {
     const [itemType, itemId, itemProp] = foundElapsedTimeStatePath;
     // Using any since the item type is dynamic
-    foundElapsedTime = (getState() as any)[itemType]?.[itemId]?.[itemProp] as number | undefined;
+    foundElapsedTime = ((getState() as any)[itemType]?.[itemId]?.[itemProp] as number | undefined) ?? 0;
   }
 
+  const foundDuration = event.options.duration ?? eventType.duration;
+
   // Finish instantly by default, can set to Infinity for no automatic end
-  const goalEndTime = eventType.duration && foundElapsedTime ? foundElapsedTime + eventType.duration : 0;
+  const goalEndTime = foundDuration && foundElapsedTime ? foundElapsedTime + foundDuration : 0;
 
   return {
     id: liveId,
@@ -220,7 +229,6 @@ function _makeLiveEventStateFromEvent(event: EventInstanceWithIds): ItemState<"l
     suspendTime: null,
     unsuspendTime: null,
     goalEndTime,
-    goalRunModeOptions: null,
     runBy: null,
     runModeOptionsWhenReady: null,
     runModeBeforePause: null,
@@ -264,14 +272,19 @@ function getEventTypeDefinition(group: string, name: string) {
 }
 
 export function _addEvents(eventIntances: EventInstance[], options: EventInstanceOptions) {
-  const chainId = options.chainId ?? repondEventsMeta.defaultChainId ?? makeNewChainId();
-  onNextTick(() => {
+  const liveId = options.liveId;
+  const chainId = liveId ?? options.chainId ?? repondEventsMeta.defaultChainId ?? makeNewChainId();
+
+  const isForSubChain = !!liveId;
+
+  const addTheEvents = () => {
     const events = eventIntances.map((event) => {
       const eventType = getEventTypeDefinition(event.group, event.name);
       return {
         ...event,
         options: {
           ...options,
+          liveId: undefined,
           ...event.options,
           isParallel: options?.isParallel ?? event.options.isParallel ?? eventType.isParallel,
           chainId, // NOTE the chainId is always the same for all events added at once
@@ -284,8 +297,8 @@ export function _addEvents(eventIntances: EventInstance[], options: EventInstanc
 
     if (chainDoesntExist) {
       // if the chain doesn’t exist, create the chain with the events
-      // _addChain(eventIntances, { ...options, chainId });
-      const newChainState: ItemState<"chains"> = { id: chainId, liveEventIds: [] };
+      // dont auto start the chain if it’s a subChain, it will start when the parent liveEvent starts
+      const newChainState: ItemState<"chains"> = { id: chainId, liveEventIds: [], canAutoActivate: !isForSubChain };
       addItem({ id: chainId, type: "chains", state: newChainState }, () => {});
     }
     const newLiveIds = [] as string[];
@@ -315,10 +328,27 @@ export function _addEvents(eventIntances: EventInstance[], options: EventInstanc
       const newPartialChainState: Record<string, Partial<ItemState<"chains">>> = {
         [chainId]: { liveEventIds: newChainEventIds },
       };
+      const newPartialLiveEventsState: Record<string, Partial<ItemState<"liveEvents">>> = {};
 
-      return { chains: newPartialChainState };
+      // If events are added to a subChain, set the goalEndTime for the parent event to Infinity, to wait for the subChain to finish
+      if (isForSubChain) newPartialLiveEventsState[chainId] = { goalEndTime: Infinity };
+
+      return { chains: newPartialChainState, liveEvents: newPartialLiveEventsState };
     });
-  });
+  };
+  // if (isForSubChain) {
+  //   if (getItemWillExist("liveEvents", liveId)) {
+  //     console.log("liveEvent exists, so adding the subChain events immediately");
+  //   } else {
+  //     console.log("liveEvent doesn't exist, so adding the subChain events on the next tick");
+  //   }
+  // }
+  if (isForSubChain && getItemWillExist("liveEvents", liveId)) {
+    // If its a subChain, add it immediately, since the parent liveEvent is already running
+    addTheEvents();
+  } else {
+    onNextTick(addTheEvents);
+  }
   return chainId;
 
   // NOTE events are auto started by the chain after the liveEventIds are set
@@ -343,12 +373,15 @@ export function _getStatesToRunEventsInMode({
   targetLiveIds?: string[];
   runOptions?: RunModeExtraOptions;
 }) {
+  const foundSubChains: string[] = [];
   const liveIdsByChain: Record<string, string[]> = {};
+  let allFoundLiveIds = targetLiveIds ?? [];
   if (chainId && targetLiveIds) {
     liveIdsByChain[chainId] = [...targetLiveIds];
   } else if (chainId && !targetLiveIds) {
     const chainState = state.chains[chainId];
     targetLiveIds = chainState?.liveEventIds;
+    allFoundLiveIds = targetLiveIds ?? [];
     if (!targetLiveIds) return {}; // `no liveEventIds found for chain ${chainId}`
     liveIdsByChain[chainId] = [...targetLiveIds];
   } else if (!chainId && targetLiveIds) {
@@ -358,6 +391,19 @@ export function _getStatesToRunEventsInMode({
       if (!liveIdsByChain[chainId]) liveIdsByChain[chainId] = [];
       liveIdsByChain[chainId]!.push(liveId);
     }
+  }
+
+  for (const liveId of allFoundLiveIds) {
+    // check if there's a chain with the same id as the liveId, meaning it's a subChain
+    if (getItemWillExist("chains", liveId)) foundSubChains.push(liveId);
+  }
+
+  // add the liveIds of the subChains
+  for (const subChainId of foundSubChains) {
+    const subChainState = state.chains[subChainId];
+    const subChainLiveIds = subChainState?.liveEventIds;
+    if (!subChainLiveIds) return {}; // `no liveEventIds found for chain ${subChainId}`
+    liveIdsByChain[subChainId] = [...subChainLiveIds];
   }
 
   const foundChainIds = Object.keys(liveIdsByChain);
@@ -389,7 +435,14 @@ export function _getStatesToRunEventsInMode({
       }
       // The liveEvent will remove itself from repond state if it was cancled or finished
     }
-    newPartialChainsState[chainId] = { liveEventIds: newChainLiveEventIds };
+    const loopedChainIsSubChain = getItemWillExist("liveEvents", chainId);
+    // if the chain is a subChain, and any of the child live events were changed to something other than "add", set canAutoActivate to true
+    let newCanAutoActivate = state.chains[chainId]?.canAutoActivate;
+    if (loopedChainIsSubChain) {
+      newCanAutoActivate = targetChainLiveIds.some((id: string) => newPartialLiveEventsState[id]!.nowRunMode !== "add");
+    }
+
+    // newPartialChainsState[chainId] = { liveEventIds: newChainLiveEventIds, canAutoActivate: newCanAutoActivate };
   }
 
   return { liveEvents: newPartialLiveEventsState, chains: newPartialChainsState };
