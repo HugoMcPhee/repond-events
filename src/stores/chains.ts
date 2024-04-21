@@ -2,7 +2,7 @@ import { InitialItemsState } from "repond";
 
 // Chains for running events in order
 
-function state() {
+function getDefaultState() {
   return {
     id: "", // chainId, this name is replaced when addign a chain
     liveEventIds: [] as string[], // the chain of event nodettes , ["showSpeech_abcd", "wait_abcd"]. when it's empty, the chain'sRemoved
@@ -11,8 +11,8 @@ function state() {
   };
 }
 
-const refs = () => ({});
+const getDefaultRefs = () => ({});
 
-const startStates = {} as InitialItemsState<typeof state>;
+const startStates = {} as InitialItemsState<typeof getDefaultState>;
 
-export const chains = { state, refs, startStates };
+export const chainsStore = { getDefaultState, getDefaultRefs, startStates };

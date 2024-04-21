@@ -1,6 +1,7 @@
 import { AllState, ItemType } from "repond";
 import { RepondEventsTypes } from "./declarations";
 
+// TODO change this to the one exported from repond
 export type ItemState<T_ItemType extends ItemType> = AllState[T_ItemType][keyof AllState[T_ItemType]];
 
 // Takes a type and keys of that type and returns a new type with those keys required

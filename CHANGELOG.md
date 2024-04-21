@@ -1,5 +1,12 @@
 TODO
 
+- use ItemState from repond
+
+v0.2.0
+
+- Works with repond 0.16.0
+- Removes the Events suffix only from the end of event names
+
 v0.1.5
 
 - Supports having sub chains for liveEvents, where when the subchain is finishes, the liveEvent finishes

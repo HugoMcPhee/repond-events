@@ -1,7 +1,7 @@
 import { InitialItemsState } from "repond";
 import { EventNodeLoose, RunMode, RunModeOptions, TimePathArray } from "../types";
 
-const state = () => ({
+const getDefaultState = () => ({
   id: "", // liveId - this is the unique id for the live event e.g "music_play_abcd"
   chainId: "", // could read shared things form here?
   event: { group: "music", name: "play", params: {} } as EventNodeLoose, // duration can be stored in the event
@@ -26,8 +26,8 @@ const state = () => ({
   elapsedTimePath: null as null | TimePathArray<any, any>, // repond state path [item,id,prop] for elapsedTime state, uses the default if not set here
 });
 
-const refs = () => ({});
+const getDefaultRefs = () => ({});
 
-const startStates = {} as InitialItemsState<typeof state>;
+const startStates = {} as InitialItemsState<typeof getDefaultState>;
 
-export const liveEvents = { state, refs, startStates };
+export const liveEventsStore = { getDefaultState, getDefaultRefs, startStates };

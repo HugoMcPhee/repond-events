@@ -1,7 +1,7 @@
 import { chainEffects } from "./effects/chains";
 import { liveEventEffects, liveEventParamEffects } from "./effects/liveEvents";
-import { chains } from "./stores/chains";
-import { liveEvents } from "./stores/liveEvents";
+import { chainsStore } from "./stores/chains";
+import { liveEventsStore } from "./stores/liveEvents";
 export {
   toDo,
   getChainState,
@@ -47,8 +47,8 @@ export type {
 } from "./types";
 
 export const repondEventsStores = {
-  liveEvents,
-  chains,
+  liveEventsStore,
+  chainsStore,
 };
 
 export const repondEventsEffectGroups = {

@@ -199,8 +199,8 @@ export function initEventTypeGroups<
   const transformedGroups: Record<string, ReturnType<typeof makeEventTypes>> = {};
 
   Object.entries(groups).forEach(([key, value]) => {
-    // Remove "Effects" from the key, if present
-    const newKey = key.replace("Events", "");
+    // Remove "Events" from the end of the key, if present
+    const newKey = key.replace(/Events$/, "");
     transformedGroups[newKey] = value;
   });
 
