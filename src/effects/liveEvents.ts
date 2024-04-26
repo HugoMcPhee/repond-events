@@ -1,7 +1,17 @@
 import { forEach } from "chootils/dist/loops";
-import { getRefs, getState, makeEffects, makeParamEffects, setState, startParamEffect, stopParamEffect } from "repond";
-import { finalizeEvent, getElapsedTime, runEventHandler } from "../internal";
+import {
+  getPrevState,
+  getRefs,
+  getState,
+  makeEffects,
+  makeParamEffects,
+  setState,
+  startParamEffect,
+  stopParamEffect,
+} from "repond";
+import { _addEvents, finalizeEvent, getElapsedTime, runEventHandler } from "../internal";
 import { repondEventsMeta } from "../meta";
+import { EventInstance } from "../types";
 
 export const liveEventEffects = makeEffects(({ itemEffect, effect }) => ({
   whenLiveEventAddedOrRemoved: effect({
@@ -10,7 +20,32 @@ export const liveEventEffects = makeEffects(({ itemEffect, effect }) => ({
       const removedLiveIds = diffInfo.itemsRemoved.liveEvents;
 
       forEach(addedLiveIds, (liveId) => startParamEffect("liveEvent", "whenElapsedTimeChanges", { liveId }));
-      forEach(removedLiveIds, (liveId) => stopParamEffect("liveEvent", "whenElapsedTimeChanges", { liveId }));
+      forEach(removedLiveIds, (liveId) => {
+        stopParamEffect("liveEvent", "whenElapsedTimeChanges", { liveId });
+        // Check if the liveIds chain had
+        const prevState = getPrevState();
+        const chainId: string = prevState.liveEvents[liveId]?.chainId;
+
+        if (!chainId) return;
+        const chainState = getState().chains[chainId];
+        if (!chainState) return console.warn("no chainState found", chainId);
+        const { duplicateEventsToAdd } = chainState;
+        const duplicateEvent: EventInstance | undefined = duplicateEventsToAdd[liveId];
+        if (!duplicateEvent) return;
+        console.log("found duplicateEvent", liveId, chainId);
+        _addEvents([duplicateEvent], { chainId });
+
+        if (!duplicateEvent) return;
+        setState((state) => {
+          const latestChainState = state.chains[chainId];
+          const nowDuplicateEventsToAdd = latestChainState.duplicateEventsToAdd;
+          const newDuplicateEventsToAdd = { ...nowDuplicateEventsToAdd };
+          delete newDuplicateEventsToAdd[liveId];
+          return { chains: { [chainId]: { duplicateEventsToAdd: newDuplicateEventsToAdd } } };
+        });
+
+        // onNextTick
+      });
     },
     check: { type: "liveEvents", addedOrRemoved: true },
     atStepEnd: false,

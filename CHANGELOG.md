@@ -2,6 +2,16 @@ TODO
 
 - use ItemState from repond
 
+v0.2.1
+
+- Supports adding duplciate events to liveEvents, if an event with the same liveId is added to a chain, it will cancel the original event, and set the new event to be added at the end of the chain once the canceled event is removed
+- Fixes checking isUnpausing and isUnsuspending in liveInfo which also fixes :
+  - isUnfreezing
+  - isFirstAdd
+  - isFirstStart
+  - isFirstPause
+  - isFirstSuspend
+
 v0.2.0
 
 - Works with repond 0.16.0

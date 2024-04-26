@@ -138,8 +138,10 @@ export function runEventHandler(liveEventId: string) {
   else if (runMode === "pause") relevantTimeProp = "pauseTime";
   else if (runMode === "suspend") relevantTimeProp = "suspendTime";
 
-  const isUnpausing = liveEventState.unpauseTime === liveEventState[relevantTimeProp];
-  const isUnsuspending = liveEventState.unsuspendTime === liveEventState[relevantTimeProp];
+  const relevantTime = liveEventState[relevantTimeProp]; // inifity if it hasn't been set yet
+
+  const isUnpausing = relevantTime != null && liveEventState.unpauseTime === relevantTime;
+  const isUnsuspending = relevantTime != null && liveEventState.unsuspendTime === relevantTime;
   const isUnfreezing = isUnpausing || isUnsuspending;
   const isFreezing = runMode === "pause" || runMode === "suspend";
 
@@ -301,8 +303,20 @@ export function _addEvents(eventIntances: EventInstance[], options: EventInstanc
       const newChainState: ItemState<"chains"> = { id: chainId, liveEventIds: [], canAutoActivate: !isForSubChain };
       addItem({ id: chainId, type: "chains", state: newChainState }, () => {});
     }
+
+    const newDuplicateLiveEventsMap: Record<string, EventInstance> = {};
+
+    const eventsWithoutDuplicates = events.filter((event) => {
+      const liveId = event.options.liveId ?? _makeLiveIdFromEventInstance(event);
+      if (getItemWillExist("liveEvents", liveId)) {
+        newDuplicateLiveEventsMap[liveId] = event;
+        return false;
+      }
+      return true;
+    });
+
     const newLiveIds = [] as string[];
-    events.forEach((event, index) => {
+    eventsWithoutDuplicates.forEach((event, index) => {
       const eventOptions = event.options;
       const chainId = options.chainId ?? eventOptions.chainId; // NOTE I think this aleways has to be the same
       if (!chainId) return console.warn(`no chainId found for ${event.group}.${event.name}`), {};
@@ -326,12 +340,23 @@ export function _addEvents(eventIntances: EventInstance[], options: EventInstanc
         : [...nowChainEventIds, ...newLiveIds];
 
       const newPartialChainState: Record<string, Partial<ItemState<"chains">>> = {
-        [chainId]: { liveEventIds: newChainEventIds },
+        [chainId]: {
+          liveEventIds: newChainEventIds,
+          duplicateEventsToAdd: { ...chainState.duplicateEventsToAdd, ...newDuplicateLiveEventsMap },
+        },
       };
       const newPartialLiveEventsState: Record<string, Partial<ItemState<"liveEvents">>> = {};
 
       // If events are added to a subChain, set the goalEndTime for the parent event to Infinity, to wait for the subChain to finish
       if (isForSubChain) newPartialLiveEventsState[chainId] = { goalEndTime: Infinity };
+
+      const liveEventsToCancel = Object.keys(chainState.duplicateEventsToAdd);
+      liveEventsToCancel.forEach((liveId) => {
+        const event = chainState.duplicateEventsToAdd[liveId];
+        const eventState = state.liveEvents[liveId];
+        if (!eventState) return console.warn(`no liveEvent found for ${liveId}`), {};
+        newPartialLiveEventsState[liveId] = { nowRunMode: "cancel" };
+      });
 
       return { chains: newPartialChainState, liveEvents: newPartialLiveEventsState };
     });

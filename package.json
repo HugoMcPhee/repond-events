@@ -1,6 +1,6 @@
 {
   "name": "repond-events",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "events for repond",
   "_main": "src/index.ts",
   "_types": "src/index.ts",
