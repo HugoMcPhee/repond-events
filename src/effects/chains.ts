@@ -1,7 +1,6 @@
 import { breakableForEach, forEach } from "chootils/dist/loops";
-import { getItemWillExist, getState, makeEffects, removeItem, setState } from "repond";
+import { ItemState, getItemWillExist, getState, makeEffects, removeItem, setState } from "repond";
 import { getActiveEventIds } from "../internal";
-import { ItemState } from "../types";
 
 export const chainEffects = makeEffects(({ itemEffect, effect }) => ({
   whenLiveEventIdsChange: itemEffect({

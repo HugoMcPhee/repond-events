@@ -1,5 +1,10 @@
 TODO
 
+-
+
+v0.2.2
+
+- Support params based on other params!
 - use ItemState from repond
 
 v0.2.1

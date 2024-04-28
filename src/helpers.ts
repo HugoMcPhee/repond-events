@@ -1,5 +1,5 @@
 import { forEach } from "chootils/dist/loops";
-import { AllState, ItemType, getState, onNextTick, setState } from "repond";
+import { AllState, ItemState, ItemType, getState, onNextTick, setState } from "repond";
 import {
   _addEvent,
   _addEvents,
@@ -14,14 +14,13 @@ import {
 import { repondEventsMeta } from "./meta";
 import {
   ChainId,
+  DefaultEventParams,
   EventGroupName,
   EventInstanceOptions,
   EventName,
+  EventParams,
   EventTuple,
   EventTypeDefinition,
-  ItemState,
-  KnownChainId,
-  EventParamsType,
   RunMode,
   RunModeExtraOptions,
   TimePathArray,
@@ -31,10 +30,10 @@ import {
 // Utils
 
 // Returns an event instance typle, useful to get a typed event with auto-completion
-export function toDo<T_Group extends EventGroupName, T_Name extends EventName<T_Group>>(
+export function toDo<T_Group extends EventGroupName, T_Name extends EventName<T_Group>, T_GenericParamA>(
   group: T_Group,
   name: T_Name,
-  params: EventParamsType<T_Group, T_Name>,
+  params: EventParams<T_Group, T_Name, T_GenericParamA>,
   options?: EventInstanceOptions
 ) {
   const eventTuple: EventTuple = [group, name, params, options] as EventTuple;
@@ -65,10 +64,10 @@ export function setChainState(chainId: ChainId, state: Partial<ItemState<"chains
 //   - Run inside set state - to read the latest state if setStates were run before this
 //   - Run inside onNextTick - to run after the current setStates and effects, to run at the start of the next frame
 
-export function runEvent<T_Group extends EventGroupName, T_Name extends EventName<T_Group>>(
+export function runEvent<T_Group extends EventGroupName, T_Name extends EventName<T_Group>, T_GenericParamA>(
   group: T_Group,
   name: T_Name,
-  params: EventParamsType<T_Group, T_Name>,
+  params: EventParams<T_Group, T_Name, T_GenericParamA>,
   options?: EventInstanceOptions
 ) {
   const eventInstance = eventNodeToEventInstance({ group, name, params: params ?? {} }, options);
@@ -77,10 +76,10 @@ export function runEvent<T_Group extends EventGroupName, T_Name extends EventNam
   return newLiveId;
 }
 
-export function runPriorityEvent<T_Group extends EventGroupName, T_Name extends EventName<T_Group>>(
+export function runPriorityEvent<T_Group extends EventGroupName, T_Name extends EventName<T_Group>, T_GenericParamA>(
   group: T_Group,
   name: T_Name,
-  params: EventParamsType<T_Group, T_Name>,
+  params: EventParams<T_Group, T_Name, T_GenericParamA>,
   options: EventInstanceOptions
 ) {
   // NOTE _addEvent runs _addEvents which has onNextTick inside

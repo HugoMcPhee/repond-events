@@ -43,7 +43,9 @@ export type {
   EventName,
   EventTypeDefinition,
   EventTuple,
-  EventParamsType,
+  EventParams,
+  CustomEventParams,
+  DefaultEventParams,
 } from "./types";
 
 export const repondEventsStores = {

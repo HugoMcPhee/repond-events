@@ -1,5 +1,5 @@
 import { breakableForEach } from "chootils/dist/loops";
-import { AllState, addItem, getItemWillExist, getState, onNextTick, removeItem, setState } from "repond";
+import { AllState, ItemState, addItem, getItemWillExist, getState, onNextTick, removeItem, setState } from "repond";
 import { getChainState, getLiveEventState } from "./helpers";
 import { repondEventsMeta as meta, repondEventsMeta } from "./meta";
 import {
@@ -10,7 +10,6 @@ import {
   EventRunLiveInfo,
   EventTuple,
   EventTypeDefinition,
-  ItemState,
   RunMode,
   RunModeExtraOptions,
 } from "./types";

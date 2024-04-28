@@ -1,9 +1,6 @@
 import { AllState, ItemType } from "repond";
 import { RepondEventsTypes } from "./declarations";
 
-// TODO change this to the one exported from repond
-export type ItemState<T_ItemType extends ItemType> = AllState[T_ItemType][keyof AllState[T_ItemType]];
-
 // Takes a type and keys of that type and returns a new type with those keys required
 type WithRequiredProps<T, K extends keyof T> = Required<Pick<T, K>> & Omit<T, K>;
 
@@ -15,7 +12,7 @@ export type TimePathArray<T_ItemType extends ItemType, T_ItemId extends keyof Al
 
 type StringWithAutocomplete<T> = T | (string & Record<never, never>);
 
-export type KnownChainId = RepondEventsTypes["KnownChainIds"];
+export type KnownChainId = RepondEventsTypes<any, any, any>["KnownChainIds"];
 export type ChainId = StringWithAutocomplete<KnownChainId>;
 
 export type RunMode = "add" | "start" | "end" | "pause" | "unpause" | "suspend" | "unsuspend" | "cancel" | "skip";
@@ -102,16 +99,25 @@ export type EventTypeDefinition<T_Params extends Record<any, any>> = {
   timePath?: TimePathArray<ItemType, keyof AllState[ItemType]>; // the path to the elapsed time in the state, uses the default if not set here
 };
 
+type OriginalEventGroups = RepondEventsTypes<any, any, any>["EventGroups"];
+
 // Helper type to strip "Events" suffix from group names
 type RemoveEventsSuffix<T extends string> = T extends `${infer Prefix}Events` ? Prefix : T;
 export type RefinedEventGroups = {
-  [K in keyof RepondEventsTypes["EventGroups"] as RemoveEventsSuffix<K>]: RepondEventsTypes["EventGroups"][K];
+  [K in keyof OriginalEventGroups as RemoveEventsSuffix<K>]: OriginalEventGroups[K];
 };
 
 export type EventGroupName = keyof RefinedEventGroups & string;
 export type EventName<T extends EventGroupName> = keyof RefinedEventGroups[T] & string;
 type EventGroups = RefinedEventGroups;
-export type EventParamsType<
+
+export type CustomEventParams<T_Group, T_Event, T_GenericParamA> = RepondEventsTypes<
+  T_Group,
+  T_Event,
+  T_GenericParamA
+>["EventParameters"];
+
+export type DefaultEventParams<
   T_Group extends EventGroupName & string,
   T_Name extends EventName<T_Group> & string
 > = RefinedEventGroups[T_Group][T_Name] extends { params: infer P }
@@ -120,8 +126,18 @@ export type EventParamsType<
   ? undefined
   : never;
 
+type Evaluate<T> = T extends infer U ? { [K in keyof U]: U[K] } : never;
+
+export type EventParams<
+  T_Group extends EventGroupName,
+  T_Event extends EventName<T_Group>,
+  T_GenericParamA
+> = CustomEventParams<T_Group, T_Event, T_GenericParamA> extends never
+  ? Evaluate<DefaultEventParams<T_Group, T_Event>> // Fall back to original params if EventParameters resolves to never
+  : CustomEventParams<T_Group, T_Event, T_GenericParamA>;
+
 export type EventTuple = {
   [G in EventGroupName]: {
-    [N in EventName<G>]: [G, N, EventParamsType<G, N>] | [G, N, EventParamsType<G, N>, EventInstanceOptions];
+    [N in EventName<G>]: [G, N, DefaultEventParams<G, N>] | [G, N, DefaultEventParams<G, N>, EventInstanceOptions];
   }[EventName<G>];
 }[EventGroupName];
