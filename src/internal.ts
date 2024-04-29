@@ -1,4 +1,4 @@
-import { breakableForEach } from "chootils/dist/loops";
+import { breakableForEach, forEach } from "chootils/dist/loops";
 import { AllState, ItemState, addItem, getItemWillExist, getState, onNextTick, removeItem, setState } from "repond";
 import { getChainState, getLiveEventState } from "./helpers";
 import { repondEventsMeta as meta, repondEventsMeta } from "./meta";
@@ -34,7 +34,7 @@ export function eventTupleToEventInstance(eventTuple: EventTuple): EventInstance
   return {
     group: eventTuple[0],
     name: eventTuple[1],
-    params: eventTuple[2],
+    params: eventTuple[2] as any,
     options: eventTuple[3] ?? {},
   };
 }
@@ -296,10 +296,22 @@ export function _addEvents(eventIntances: EventInstance[], options: EventInstanc
 
     const chainDoesntExist = !getItemWillExist("chains", chainId);
 
+    // Check if the parent liveEvent is already running
+    const existingParentLiveEventForSubChain = liveId ? getState().liveEvents[liveId] : null;
+    const parentLiveEventRunMode = existingParentLiveEventForSubChain?.nowRunMode ?? null;
+    const parentLiveEventHasNonAddRunMode = liveId ? parentLiveEventRunMode && parentLiveEventRunMode !== "add" : false;
+
     if (chainDoesntExist) {
       // if the chain doesn’t exist, create the chain with the events
       // dont auto start the chain if it’s a subChain, it will start when the parent liveEvent starts
-      const newChainState: ItemState<"chains"> = { id: chainId, liveEventIds: [], canAutoActivate: !isForSubChain };
+
+      let canAutoActivate = !isForSubChain;
+      if (parentLiveEventHasNonAddRunMode) {
+        // If the parent liveEvent is already running, start the subChain immediately
+        canAutoActivate = true;
+      }
+
+      const newChainState: ItemState<"chains"> = { id: chainId, liveEventIds: [], canAutoActivate };
       addItem({ id: chainId, type: "chains", state: newChainState }, () => {});
     }
 
@@ -347,7 +359,12 @@ export function _addEvents(eventIntances: EventInstance[], options: EventInstanc
       const newPartialLiveEventsState: Record<string, Partial<ItemState<"liveEvents">>> = {};
 
       // If events are added to a subChain, set the goalEndTime for the parent event to Infinity, to wait for the subChain to finish
-      if (isForSubChain) newPartialLiveEventsState[chainId] = { goalEndTime: Infinity };
+      if (isForSubChain) {
+        newPartialLiveEventsState[chainId] = { goalEndTime: Infinity };
+        if (parentLiveEventHasNonAddRunMode && parentLiveEventRunMode !== "start") {
+          forEach(newChainEventIds, (liveId) => (newPartialLiveEventsState[liveId] = { nowRunMode: "add" }));
+        }
+      }
 
       const liveEventsToCancel = Object.keys(chainState.duplicateEventsToAdd);
       liveEventsToCancel.forEach((liveId) => {
@@ -360,13 +377,6 @@ export function _addEvents(eventIntances: EventInstance[], options: EventInstanc
       return { chains: newPartialChainState, liveEvents: newPartialLiveEventsState };
     });
   };
-  // if (isForSubChain) {
-  //   if (getItemWillExist("liveEvents", liveId)) {
-  //     console.log("liveEvent exists, so adding the subChain events immediately");
-  //   } else {
-  //     console.log("liveEvent doesn't exist, so adding the subChain events on the next tick");
-  //   }
-  // }
   if (isForSubChain && getItemWillExist("liveEvents", liveId)) {
     // If its a subChain, add it immediately, since the parent liveEvent is already running
     addTheEvents();

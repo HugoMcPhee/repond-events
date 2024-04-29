@@ -2,6 +2,12 @@ TODO
 
 -
 
+v0.2.3
+
+- Support starting sub events instantly
+  - Supports adding and starting sub events to a liveEvent that's already started
+  - NOTE the part that checks if it's not add or start, that sets the runMode (e.g to pause or suspend) may need tweaking to run after the frist setState, so the 'add' handler can run before that 'pause' or 'suspend'
+
 v0.2.2
 
 - Support params based on other params!

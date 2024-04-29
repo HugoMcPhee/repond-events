@@ -28,7 +28,7 @@ export const liveEventEffects = makeEffects(({ itemEffect, effect }) => ({
 
         if (!chainId) return;
         const chainState = getState().chains[chainId];
-        if (!chainState) return console.warn("no chainState found", chainId);
+        if (!chainState) return; // ("no chainState found", chainId);
         const { duplicateEventsToAdd } = chainState;
         const duplicateEvent: EventInstance | undefined = duplicateEventsToAdd[liveId];
         if (!duplicateEvent) return;
