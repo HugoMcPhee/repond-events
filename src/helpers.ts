@@ -10,6 +10,7 @@ import {
   getChainIdFromLiveEventId,
   getLiveEventsIdsUpToLiveEventId,
   getLiveIdsForGroup,
+  makeNewChainId,
 } from "./internal";
 import { repondEventsMeta } from "./meta";
 import {
@@ -67,13 +68,19 @@ export function setChainState(chainId: ChainId, state: Partial<ItemState<"chains
 export function runEvent<T_Group extends EventGroupName, T_Name extends EventName<T_Group>, T_GenericParamA>(
   group: T_Group,
   name: T_Name,
-  params: EventParams<T_Group, T_Name, T_GenericParamA>,
+  params: Partial<EventParams<T_Group, T_Name, T_GenericParamA>>,
   options?: EventInstanceOptions
 ) {
   const eventInstance = eventNodeToEventInstance({ group, name, params: params ?? {} }, options);
-  const newLiveId = options?.liveId ?? _makeLiveIdFromEventInstance(eventInstance);
-  const chainId = _addEvent({ group, name, params: params ?? {} }, { ...options, liveId: newLiveId });
-  return newLiveId;
+  // generate the same chainId that would be generated if the event was added, but it's needed to get the liveId
+  // NOTE in _addEvents, a liveId given means its the parent liveId for subEvents, meaning the chainId will be the same as the parent liveId,
+  // but since this function only adds one event, the chainId will be different from the liveId
+  const chainId = options?.chainId ?? repondEventsMeta.defaultChainId ?? makeNewChainId();
+  eventInstance.options.chainId = chainId;
+  const liveId = options?.liveId ?? _makeLiveIdFromEventInstance(eventInstance);
+  const realLiveId = _addEvent({ group, name, params: params ?? {} }, { ...options, liveId, chainId });
+
+  return realLiveId;
 }
 
 export function runPriorityEvent<T_Group extends EventGroupName, T_Name extends EventName<T_Group>, T_GenericParamA>(

@@ -1,6 +1,13 @@
 TODO
 
--
+- rename TimePathArray to StatePathArray, and maybe export from repond
+- change TimePathArray to only need one generic parameter, and the item id is based on the item type parameter
+- Fix it so setting a duration on a liveEvent will only add once the liveEvent is started, right now it does it on add
+
+v0.2.4
+
+- Better ids for runEvent
+- Remove liveId from options in \_addEvent to prevent adding the event as a sub event
 
 v0.2.3
 

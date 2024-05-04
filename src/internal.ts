@@ -239,7 +239,6 @@ function _makeLiveEventStateFromEvent(event: EventInstanceWithIds): ItemState<"l
 
 export function _makeLiveIdFromEventInstance(event: EventInstance) {
   const { chainId, liveId, addedBy } = event.options;
-  const chainState = chainId ? getChainState(chainId) : undefined;
 
   return (
     liveId ??
@@ -389,8 +388,8 @@ export function _addEvents(eventIntances: EventInstance[], options: EventInstanc
 }
 
 export function _addEvent(event: EventNodeLoose, options: EventInstanceOptions) {
-  const eventInstance: EventInstance = { ...event, options: options };
-  const newChainId = _addEvents([eventInstance], options);
+  const eventInstance: EventInstance = { ...event, options };
+  const newChainId = _addEvents([eventInstance], { ...options, liveId: undefined }); // remove the liveId options for all the events, otherwise they will be counted as sub events
   return newChainId;
 }
 
