@@ -4,6 +4,11 @@ TODO
 - change TimePathArray to only need one generic parameter, and the item id is based on the item type parameter
 - Fix it so setting a duration on a liveEvent will only add once the liveEvent is started, right now it does it on add
 
+- v0.2.5
+- Renamed "toDo" to "todo" and exported an alias called "II"
+- Added way to have optional individual params and whole params object
+- Adds the default props from the event type definition
+
 v0.2.4
 
 - Better ids for runEvent

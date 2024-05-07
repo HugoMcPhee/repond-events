@@ -22,22 +22,36 @@ import {
   EventParams,
   EventTuple,
   EventTypeDefinition,
+  MakeOptionalWhereUndefined,
   RunMode,
   RunModeExtraOptions,
   TimePathArray,
+  TypeOrUndefinedIfAllOptional,
 } from "./types";
 
 // ---------------------------------------------
 // Utils
 
+type OptionalIfUndefinableSpreadType<T extends any> = T extends undefined
+  ? [T?, EventInstanceOptions?]
+  : [T, EventInstanceOptions?];
+
 // Returns an event instance typle, useful to get a typed event with auto-completion
-export function toDo<T_Group extends EventGroupName, T_Name extends EventName<T_Group>, T_GenericParamA>(
+// meant to use with runEvents like runEvents([run("group", "name", params), run("group", "name", params)])
+export function todo<T_Group extends EventGroupName, T_Name extends EventName<T_Group>, T_GenericParamA>(
   group: T_Group,
   name: T_Name,
-  params: EventParams<T_Group, T_Name, T_GenericParamA>,
-  options?: EventInstanceOptions
+  ...args: OptionalIfUndefinableSpreadType<TypeOrUndefinedIfAllOptional<EventParams<T_Group, T_Name, T_GenericParamA>>>
 ) {
-  const eventTuple: EventTuple = [group, name, params, options] as EventTuple;
+  // ...params: OptionalIfUndefinableSpreadType<
+  //   TypeOrUndefinedIfAllOptional<EventParams<T_Group, T_Name, T_GenericParamA>>
+  // >,
+  // options?: EventInstanceOptions
+  // Destructure args to get params and options
+  let params = args[0]; // This would be your number or undefined
+  let options = args[1]; // This would be your EventInstanceOptions or undefined
+
+  const eventTuple: EventTuple = [group, name, params ?? {}, options] as EventTuple;
 
   return eventTuple;
 }
@@ -68,9 +82,12 @@ export function setChainState(chainId: ChainId, state: Partial<ItemState<"chains
 export function runEvent<T_Group extends EventGroupName, T_Name extends EventName<T_Group>, T_GenericParamA>(
   group: T_Group,
   name: T_Name,
-  params: Partial<EventParams<T_Group, T_Name, T_GenericParamA>>,
-  options?: EventInstanceOptions
+  ...args: OptionalIfUndefinableSpreadType<TypeOrUndefinedIfAllOptional<EventParams<T_Group, T_Name, T_GenericParamA>>>
 ) {
+  // Destructure args to get params and options
+  let params = args[0]; // This would be your number or undefined
+  let options = args[1]; // This would be your EventInstanceOptions or undefined
+
   const eventInstance = eventNodeToEventInstance({ group, name, params: params ?? {} }, options);
   // generate the same chainId that would be generated if the event was added, but it's needed to get the liveId
   // NOTE in _addEvents, a liveId given means its the parent liveId for subEvents, meaning the chainId will be the same as the parent liveId,

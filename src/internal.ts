@@ -173,8 +173,10 @@ export function runEventHandler(liveEventId: string) {
     goalEndTime: liveEventState.goalEndTime ?? 0,
   };
 
+  const paramsWithDefaults = { ...eventTypeDefinition.defaultParams, ...liveEventState.event.params };
+
   // Run the event handler
-  eventHandler(liveEventState.event.params, liveInfo);
+  eventHandler(paramsWithDefaults, liveInfo);
 }
 
 export function finalizeEvent(liveEventId: string) {

@@ -3,7 +3,8 @@ import { liveEventEffects, liveEventParamEffects } from "./effects/liveEvents";
 import { chainsStore } from "./stores/chains";
 import { liveEventsStore } from "./stores/liveEvents";
 export {
-  toDo,
+  todo,
+  todo as II, // as an easy-to-read alias for todo
   getChainState,
   getLiveEventState,
   setLiveEventState,

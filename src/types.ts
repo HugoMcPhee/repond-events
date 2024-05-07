@@ -126,6 +126,10 @@ export type DefaultEventParams<
   ? undefined
   : never;
 
+export type MakeOptionalWhereUndefined<T> = Partial<T> & {
+  [P in keyof T as undefined extends T[P] ? never : P]: T[P];
+};
+
 type Evaluate<T> = T extends infer U ? { [K in keyof U]: U[K] } : never;
 
 export type EventParams<
@@ -133,7 +137,7 @@ export type EventParams<
   T_Event extends EventName<T_Group>,
   T_GenericParamA
 > = CustomEventParams<T_Group, T_Event, T_GenericParamA> extends never
-  ? Evaluate<DefaultEventParams<T_Group, T_Event>> // Fall back to original params if EventParameters resolves to never
+  ? MakeOptionalWhereUndefined<Evaluate<DefaultEventParams<T_Group, T_Event>>> // Fall back to original params if EventParameters resolves to never
   : CustomEventParams<T_Group, T_Event, T_GenericParamA>;
 
 export type EventTuple = {
@@ -141,3 +145,12 @@ export type EventTuple = {
     [N in EventName<G>]: [G, N, DefaultEventParams<G, N>] | [G, N, DefaultEventParams<G, N>, EventInstanceOptions];
   }[EventName<G>];
 }[EventGroupName];
+
+
+// Helper type to determine if all properties of a type are optional
+export type AllOptional<T> = {
+  [P in keyof T]-?: undefined extends T[P] ? never : P
+} extends { [key: string]: never } ? true : false;
+
+// Helper type that returns the type or `undefined` if all properties are optional
+export type TypeOrUndefinedIfAllOptional<T> = AllOptional<T> extends true ? T | undefined : T;
