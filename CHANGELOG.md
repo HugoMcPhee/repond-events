@@ -1,8 +1,11 @@
 TODO
 
-- rename TimePathArray to StatePathArray, and maybe export from repond
-- change TimePathArray to only need one generic parameter, and the item id is based on the item type parameter
-- Fix it so setting a duration on a liveEvent will only add once the liveEvent is started, right now it does it on add
+-
+
+- v0.2.6
+- Show a warning if an event type isn't found
+- Allows individual events to overwrite isParallel, timePath and duration options (over of the runEvents options)
+- Fixes setting a duration on a liveEvent to only apply when the liveEvent starts
 
 - v0.2.5
 - Renamed "toDo" to "todo" and exported an alias called "II"

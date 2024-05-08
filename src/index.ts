@@ -37,7 +37,6 @@ export type {
   EasyEventInstance,
   RunModeExtraOptions,
   RunModeOptions,
-  TimePathArray,
   KnownChainId,
   RunMode,
   EventGroupName,

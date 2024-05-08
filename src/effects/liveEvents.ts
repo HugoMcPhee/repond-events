@@ -9,7 +9,7 @@ import {
   startParamEffect,
   stopParamEffect,
 } from "repond";
-import { _addEvents, finalizeEvent, getElapsedTime, runEventHandler } from "../internal";
+import { _addEvents, finalizeEvent, getElapsedTime, getEventTypeDefinition, runEventHandler } from "../internal";
 import { repondEventsMeta } from "../meta";
 import { EventInstance } from "../types";
 
@@ -103,7 +103,25 @@ export const liveEventEffects = makeEffects(({ itemEffect, effect }) => ({
       if (!addTime) return console.warn("run type changed while not added", runMode), undefined;
 
       if (runMode === "start") {
-        setLiveState({ startTime: nowTime });
+        const liveEvent = getState().liveEvents[liveId];
+        const startTime = liveEvent.startTime;
+        let newGoalEndTime = liveEvent.goalEndTime;
+
+        // NOTE the way eventHandler calculates isFirstStart is by using isUnfreezing, but here it's simpler
+        const isFirstStart = startTime === null;
+
+        if (isFirstStart) {
+          const eventType = getEventTypeDefinition(liveEvent.event.group, liveEvent.event.name);
+
+          const foundElapsedTime = getElapsedTime(liveId);
+          const foundDuration = liveEvent.duration ?? eventType.duration;
+
+          if (foundDuration != null && foundElapsedTime != null && isFirstStart) {
+            newGoalEndTime = foundElapsedTime + foundDuration * 1000;
+          }
+        }
+
+        setLiveState({ startTime: nowTime, goalEndTime: newGoalEndTime });
         runEventHandler(liveId);
         return;
       }

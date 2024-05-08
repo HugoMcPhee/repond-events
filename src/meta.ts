@@ -1,7 +1,8 @@
-import { ChainId, TimePathArray } from "./types";
+import { StatePath } from "repond";
+import { ChainId } from "./types";
 
 export const repondEventsMeta = {
-  defaultElapsedTimePath: null as null | TimePathArray<any, any>,
+  defaultElapsedTimePath: null as null | StatePath<any>,
   allEventTypeGroups: {} as Record<string, Record<string, any>>,
   defaultChainId: null as null | ChainId,
 };

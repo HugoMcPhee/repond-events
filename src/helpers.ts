@@ -1,5 +1,5 @@
 import { forEach } from "chootils/dist/loops";
-import { AllState, ItemState, ItemType, getState, onNextTick, setState } from "repond";
+import { AllState, ItemState, ItemType, StatePath, getState, onNextTick, setState } from "repond";
 import {
   _addEvent,
   _addEvents,
@@ -25,7 +25,6 @@ import {
   MakeOptionalWhereUndefined,
   RunMode,
   RunModeExtraOptions,
-  TimePathArray,
   TypeOrUndefinedIfAllOptional,
 } from "./types";
 
@@ -208,12 +207,11 @@ export function makeEventTypes<
 
 export function initEventTypeGroups<
   T extends Record<string, ReturnType<typeof makeEventTypes>>,
-  T_TimePathItemType extends ItemType,
-  T_TimePathItemId extends keyof AllState[T_TimePathItemType]
+  T_TimePathItemType extends ItemType
 >(
   groups: T,
   options?: {
-    defaultElapsedTimePath?: TimePathArray<T_TimePathItemType, T_TimePathItemId>;
+    defaultElapsedTimePath?: StatePath<T_TimePathItemType>;
     defaultChainId?: string; // leave undefined to generate a random name for each chain
   }
 ): T {

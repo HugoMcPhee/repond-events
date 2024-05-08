@@ -1,11 +1,12 @@
-import { InitialItemsState } from "repond";
-import { EventNodeLoose, RunMode, RunModeOptions, TimePathArray } from "../types";
+import { InitialItemsState, StatePath } from "repond";
+import { EventNodeLoose, RunMode, RunModeOptions } from "../types";
 
 const getDefaultState = () => ({
   id: "", // liveId - this is the unique id for the live event e.g "music_play_abcd"
   chainId: "", // could read shared things form here?
   event: { group: "music", name: "play", params: {} } as EventNodeLoose, // duration can be stored in the event
   isParallel: false, // if it should run in parallel with other events
+  duration: null, // the duration option provided, only set from options and used when the event starts
   addedBy: null as null | string, // incase it's useful to know where an event was added from (for multiplayer or if it was added automatically etc)
   runBy: null as null | string, // an optional string to identify who is ran the runMode the event, e.g "player1" or "saveGame"
   // Run types
@@ -23,7 +24,7 @@ const getDefaultState = () => ({
   unpauseTime: null as null | number, // when resuming, recalculate the new goalEndTime by adding remainingTime to nowTime (remainingTime is difference between the pauseTime and the old goalEndTime),
   unsuspendTime: null as null | number, // when resuming, recalculate the new goalEndTime by adding remainingTime to nowTime (remainingTime is difference between the pauseTime and the old goalEndTime),
   //
-  elapsedTimePath: null as null | TimePathArray<any, any>, // repond state path [item,id,prop] for elapsedTime state, uses the default if not set here
+  elapsedTimePath: null as null | StatePath<any>, // repond state path [item,id,prop] for elapsedTime state, uses the default if not set here
 });
 
 const getDefaultRefs = () => ({});

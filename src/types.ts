@@ -1,14 +1,8 @@
-import { AllState, ItemType } from "repond";
+import { AllState, ItemType, StatePath } from "repond";
 import { RepondEventsTypes } from "./declarations";
 
 // Takes a type and keys of that type and returns a new type with those keys required
 type WithRequiredProps<T, K extends keyof T> = Required<Pick<T, K>> & Omit<T, K>;
-
-export type TimePathArray<T_ItemType extends ItemType, T_ItemId extends keyof AllState[T_ItemType]> = [
-  T_ItemType,
-  T_ItemId,
-  keyof AllState[T_ItemType][T_ItemId] & string
-];
 
 type StringWithAutocomplete<T> = T | (string & Record<never, never>);
 
@@ -35,7 +29,7 @@ export type EventInstanceOptions = {
   liveId?: string;
   addedBy?: string;
   isParallel?: boolean;
-  timePath?: TimePathArray<ItemType, keyof AllState[ItemType]>;
+  timePath?: StatePath<ItemType>;
   hasPriority?: boolean; // if the event should be run before other inactive events
   duration?: number; // in ms, this can always be changed by the event handler, defaults to 0
 };
@@ -96,7 +90,7 @@ export type EventTypeDefinition<T_Params extends Record<any, any>> = {
   isParallel?: boolean;
   id?: string; // groupName_eventName , set automatically in initEventGroups
   duration?: number; // in ms, this can always be changed by the event handler, defaults to a very large number
-  timePath?: TimePathArray<ItemType, keyof AllState[ItemType]>; // the path to the elapsed time in the state, uses the default if not set here
+  timePath?: StatePath<ItemType>; // the path to the elapsed time in the state, uses the default if not set here
 };
 
 type OriginalEventGroups = RepondEventsTypes<any, any, any>["EventGroups"];
@@ -146,11 +140,12 @@ export type EventTuple = {
   }[EventName<G>];
 }[EventGroupName];
 
-
 // Helper type to determine if all properties of a type are optional
 export type AllOptional<T> = {
-  [P in keyof T]-?: undefined extends T[P] ? never : P
-} extends { [key: string]: never } ? true : false;
+  [P in keyof T]-?: undefined extends T[P] ? never : P;
+} extends { [key: string]: never }
+  ? true
+  : false;
 
 // Helper type that returns the type or `undefined` if all properties are optional
 export type TypeOrUndefinedIfAllOptional<T> = AllOptional<T> extends true ? T | undefined : T;

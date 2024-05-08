@@ -198,7 +198,7 @@ export function finalizeEvent(liveEventId: string) {
 }
 
 function _makeLiveEventStateFromEvent(event: EventInstanceWithIds): ItemState<"liveEvents"> {
-  const { chainId, liveId, addedBy, isParallel, timePath, hasPriority } = event.options;
+  const { chainId, liveId, addedBy, isParallel, timePath, hasPriority, duration } = event.options;
 
   const eventType = getEventTypeDefinition(event.group, event.name);
   let foundElapsedTime = 0;
@@ -209,10 +209,9 @@ function _makeLiveEventStateFromEvent(event: EventInstanceWithIds): ItemState<"l
     foundElapsedTime = ((getState() as any)[itemType]?.[itemId]?.[itemProp] as number | undefined) ?? 0;
   }
 
-  const foundDuration = event.options.duration ?? eventType.duration;
-
   // Finish instantly by default, can set to Infinity for no automatic end
-  const goalEndTime = foundDuration && foundElapsedTime ? foundElapsedTime + foundDuration : 0;
+  // If a duration's provided, then it sets the endTime in when the live event starts
+  const goalEndTime = 0;
 
   return {
     id: liveId,
@@ -221,6 +220,7 @@ function _makeLiveEventStateFromEvent(event: EventInstanceWithIds): ItemState<"l
     // isActive: false,
     elapsedTimePath: timePath ?? meta.defaultElapsedTimePath,
     isParallel: !!isParallel,
+    duration: duration ?? null,
     addedBy: addedBy ?? null,
     chainId,
     event,
@@ -269,7 +269,7 @@ export function eventNodeToEventInstance(eventNode: EventNodeLoose, options?: Ev
   };
 }
 
-function getEventTypeDefinition(group: string, name: string) {
+export function getEventTypeDefinition(group: string, name: string) {
   return meta.allEventTypeGroups[group]?.[name] as EventTypeDefinition<any>;
 }
 
@@ -282,15 +282,21 @@ export function _addEvents(eventIntances: EventInstance[], options: EventInstanc
   const addTheEvents = () => {
     const events = eventIntances.map((event) => {
       const eventType = getEventTypeDefinition(event.group, event.name);
+      if (!eventType) {
+        console.warn(`no eventType found for ${event.group}.${event.name}`);
+      }
+
       return {
         ...event,
         options: {
           ...options,
           liveId: undefined,
           ...event.options,
-          isParallel: options?.isParallel ?? event.options.isParallel ?? eventType.isParallel,
+          addedBy: event.options.addedBy ?? options?.addedBy,
+          isParallel: event.options.isParallel ?? options?.isParallel ?? eventType?.isParallel,
           chainId, // NOTE the chainId is always the same for all events added at once
-          timePath: options.timePath ?? event.options.timePath ?? eventType.timePath,
+          timePath: event.options.timePath ?? options.timePath ?? eventType?.timePath,
+          duration: event.options.duration ?? options.duration ?? eventType?.duration,
         },
       };
     });
@@ -332,8 +338,7 @@ export function _addEvents(eventIntances: EventInstance[], options: EventInstanc
       const eventOptions = event.options;
       const chainId = options.chainId ?? eventOptions.chainId; // NOTE I think this aleways has to be the same
       if (!chainId) return console.warn(`no chainId found for ${event.group}.${event.name}`), {};
-      const addedBy = eventOptions.addedBy ?? options.addedBy;
-      const eventWithNewOptions = { ...event, options: { ...event.options, chainId, addedBy } };
+      const eventWithNewOptions = { ...event, options: { ...event.options, chainId } };
       const liveId = eventOptions.liveId ?? _makeLiveIdFromEventInstance(eventWithNewOptions);
       newLiveIds.push(liveId);
       const eventWithLiveId = { ...eventWithNewOptions, options: { ...eventWithNewOptions.options, liveId } };
