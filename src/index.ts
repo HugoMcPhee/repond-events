@@ -5,6 +5,7 @@ import { liveEventsStore } from "./stores/liveEvents";
 export {
   todo,
   todo as II, // as an easy-to-read alias for todo
+  todo as E, // as an easy-to-read alias for todo (Event)
   getChainState,
   getLiveEventState,
   setLiveEventState,

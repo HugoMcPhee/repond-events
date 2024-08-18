@@ -2,6 +2,7 @@ export interface RepondEventsTypesUntyped<T_Group, T_Event, T_GenericParamA> {
   EventGroups: Record<string, Record<string, any>>;
   KnownChainIds: string;
   EventParameters: any; // to type event parameter with dependant types
+  EmojiKeys: Record<string, string>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface

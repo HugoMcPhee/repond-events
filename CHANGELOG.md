@@ -2,6 +2,10 @@ TODO
 
 -
 
+- v0.2.7
+- support emoji keys for event group names
+- added 'E' alias to make an event ('todo' )
+
 - v0.2.6
 - Show a warning if an event type isn't found
 - Allows individual events to overwrite isParallel, timePath and duration options (over of the runEvents options)

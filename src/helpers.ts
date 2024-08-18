@@ -16,6 +16,7 @@ import { repondEventsMeta } from "./meta";
 import {
   ChainId,
   DefaultEventParams,
+  EmojiKeys,
   EventGroupName,
   EventInstanceOptions,
   EventName,
@@ -35,13 +36,28 @@ type OptionalIfUndefinableSpreadType<T extends any> = T extends undefined
   ? [T?, EventInstanceOptions?]
   : [T, EventInstanceOptions?];
 
+type ExcludedOriginalKeys = {
+  [K in keyof EmojiKeys]: EmojiKeys[K];
+}[keyof EmojiKeys];
+
+type AcceptableKeys = Exclude<EventGroupName, ExcludedOriginalKeys> | keyof EmojiKeys;
+
 // Returns an event instance typle, useful to get a typed event with auto-completion
 // meant to use with runEvents like runEvents([run("group", "name", params), run("group", "name", params)])
-export function todo<T_Group extends EventGroupName, T_Name extends EventName<T_Group>, T_GenericParamA>(
-  group: T_Group,
+export function todo<
+  T_Key extends AcceptableKeys,
+  T_Group extends T_Key extends keyof EmojiKeys ? EmojiKeys[T_Key] : T_Key,
+  T_Name extends EventName<T_Group>,
+  T_GenericParamA
+>(
+  groupOrEmoji: T_Key,
   name: T_Name,
   ...args: OptionalIfUndefinableSpreadType<TypeOrUndefinedIfAllOptional<EventParams<T_Group, T_Name, T_GenericParamA>>>
 ) {
+  const group =
+    groupOrEmoji in repondEventsMeta.emojiKeys
+      ? repondEventsMeta.emojiKeys[groupOrEmoji as keyof EmojiKeys]
+      : groupOrEmoji;
   // ...params: OptionalIfUndefinableSpreadType<
   //   TypeOrUndefinedIfAllOptional<EventParams<T_Group, T_Name, T_GenericParamA>>
   // >,
@@ -78,11 +94,21 @@ export function setChainState(chainId: ChainId, state: Partial<ItemState<"chains
 //   - Run inside set state - to read the latest state if setStates were run before this
 //   - Run inside onNextTick - to run after the current setStates and effects, to run at the start of the next frame
 
-export function runEvent<T_Group extends EventGroupName, T_Name extends EventName<T_Group>, T_GenericParamA>(
-  group: T_Group,
+export function runEvent<
+  T_Key extends AcceptableKeys,
+  T_Group extends T_Key extends keyof EmojiKeys ? EmojiKeys[T_Key] : T_Key,
+  T_Name extends EventName<T_Group>,
+  T_GenericParamA
+>(
+  groupOrEmoji: T_Key,
   name: T_Name,
   ...args: OptionalIfUndefinableSpreadType<TypeOrUndefinedIfAllOptional<EventParams<T_Group, T_Name, T_GenericParamA>>>
 ) {
+  const group =
+    groupOrEmoji in repondEventsMeta.emojiKeys
+      ? repondEventsMeta.emojiKeys[groupOrEmoji as keyof EmojiKeys]
+      : groupOrEmoji;
+
   // Destructure args to get params and options
   let params = args[0]; // This would be your number or undefined
   let options = args[1]; // This would be your EventInstanceOptions or undefined
@@ -213,10 +239,12 @@ export function initEventTypeGroups<
   options?: {
     defaultElapsedTimePath?: StatePath<T_TimePathItemType>;
     defaultChainId?: string; // leave undefined to generate a random name for each chain
+    emojiKeys?: Record<string, string>;
   }
 ): T {
   repondEventsMeta.defaultElapsedTimePath = options?.defaultElapsedTimePath ?? null;
   repondEventsMeta.defaultChainId = options?.defaultChainId ?? null;
+  repondEventsMeta.emojiKeys = options?.emojiKeys ?? {};
   const transformedGroups: Record<string, ReturnType<typeof makeEventTypes>> = {};
 
   Object.entries(groups).forEach(([key, value]) => {
