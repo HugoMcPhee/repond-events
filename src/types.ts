@@ -94,7 +94,9 @@ export type EventTypeDefinition<T_Params extends Record<any, any>> = {
 };
 
 type OriginalEventGroups = RepondEventsTypes<any, any, any>["EventGroups"];
-export type EmojiKeys = RepondEventsTypes<any, any, any>["EmojiKeys"];
+export type EmojiKeys = RepondEventsTypes<any, any, any>["EmojiKeys"] extends never
+  ? Record<string, string>
+  : RepondEventsTypes<any, any, any>["EmojiKeys"];
 
 // Helper type to strip "Events" suffix from group names
 type RemoveEventsSuffix<T extends string> = T extends `${infer Prefix}Events` ? Prefix : T;

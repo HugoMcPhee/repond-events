@@ -2,6 +2,9 @@ TODO
 
 -
 
+- v0.2.8
+- Fix types when not using emoji keys
+
 - v0.2.7
 - support emoji keys for event group names
 - added 'E' alias to make an event ('todo' )
