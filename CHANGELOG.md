@@ -2,7 +2,7 @@ TODO
 
 -
 
-- v0.2.8
+- v0.2.9
 - Fix types when not using emoji keys
 
 - v0.2.7

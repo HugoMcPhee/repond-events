@@ -28,6 +28,7 @@ import {
   RunModeExtraOptions,
   TypeOrUndefinedIfAllOptional,
 } from "./types";
+import { UnsetEmojiKeysType } from "./declarations";
 
 // ---------------------------------------------
 // Utils
@@ -42,11 +43,18 @@ type ExcludedOriginalKeys = {
 
 type AcceptableKeys = Exclude<EventGroupName, ExcludedOriginalKeys> | keyof EmojiKeys;
 
+type ResolveGroupType<T_Key extends AcceptableKeys> = EmojiKeys extends UnsetEmojiKeysType
+  ? T_Key
+  : T_Key extends keyof EmojiKeys
+  ? EmojiKeys[T_Key]
+  : T_Key;
+
 // Returns an event instance typle, useful to get a typed event with auto-completion
 // meant to use with runEvents like runEvents([run("group", "name", params), run("group", "name", params)])
 export function todo<
   T_Key extends AcceptableKeys,
-  T_Group extends T_Key extends keyof EmojiKeys ? EmojiKeys[T_Key] : T_Key,
+  // T_Group extends T_Key extends keyof EmojiKeys ? EmojiKeys[T_Key] : T_Key,
+  T_Group extends ResolveGroupType<T_Key>,
   T_Name extends EventName<T_Group>,
   T_GenericParamA
 >(
@@ -96,7 +104,8 @@ export function setChainState(chainId: ChainId, state: Partial<ItemState<"chains
 
 export function runEvent<
   T_Key extends AcceptableKeys,
-  T_Group extends T_Key extends keyof EmojiKeys ? EmojiKeys[T_Key] : T_Key,
+  // T_Group extends T_Key extends keyof EmojiKeys ? EmojiKeys[T_Key] : T_Key,
+  T_Group extends ResolveGroupType<T_Key>,
   T_Name extends EventName<T_Group>,
   T_GenericParamA
 >(
