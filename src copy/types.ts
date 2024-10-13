@@ -92,11 +92,6 @@ export type EmojiKeys = RepondEventsTypes<any, any, any>["EmojiKeys"] extends ne
   ? Record<string, string>
   : RepondEventsTypes<any, any, any>["EmojiKeys"];
 
-  type OriginalValueGroups = RepondEventsTypes<any, any, any>["ValueGroups"];
-export type ValueEmojiKeys = RepondEventsTypes<any, any, any>["EmojiKeys"] extends never
-  ? Record<string, string>
-  : RepondEventsTypes<any, any, any>["EmojiKeys"];
-
 // Helper type to strip "Events" suffix from group names
 type RemoveEventsSuffix<T extends string> = T extends `${infer Prefix}Events` ? Prefix : T;
 export type RefinedEventGroups = {
@@ -158,23 +153,11 @@ export type ParamMap = Record<string, any>;
 
 export type RawValue = number | string | boolean | null | undefined | Record<any, any> | any[];
 
-export type ValueBlockOptions = {
-  chainId?: ChainId;
-  liveId?: string;
-  addedBy?: string;
-  isParallel?: boolean;
-  timePath?: StatePath<ItemType>;
-  hasPriority?: boolean; // if the event should be run before other inactive events
-  duration?: number; // in ms, this can always be changed by the event handler, defaults to 0,
-  isFast?: boolean; // if the event should be run as fast as possible, skipping lifecycles
-  parentChainId?: ChainId; // for when we want scoping info to be passed down, but it's not a subchain, like in getEventValue
-};
-
 export type ValueBlock = {
   group: string;
   name: string;
   params?: Record<any, any>;
-  options: ValueBlockOptions;
+  options: EventBlockOptions;
   type: "value";
 };
 
@@ -199,36 +182,3 @@ export type ValueTypeDefinition<T_Params extends Record<any, any>> = {
   isParallel?: boolean;
   id?: string; // groupName_valueName , set automatically in initValueGroups
 };
-
-// Helper type to strip "Events" suffix from group names
-type RemoveValuesSuffix<T extends string> = T extends `${infer Prefix}Values` ? Prefix : T;
-export type RefinedValueGroups = {
-  [K in keyof OriginalValueGroups as RemoveValuesSuffix<K>]: OriginalValueGroups[K];
-};
-
-export type ValueGroupName = keyof RefinedValueGroups & string;
-export type ValueName<T extends ValueGroupName> = keyof RefinedValueGroups[T] & string;
-type ValueGroups = RefinedValueGroups;
-
-export type CustomValueParams<T_Group, T_Event, T_GenericParamA> = RepondEventsTypes<
-  T_Group,
-  T_Event,
-  T_GenericParamA
->["EventParameters"];
-
-export type DefaultValueParams<
-  T_Group extends ValueGroupName & string,
-  T_Name extends ValueName<T_Group> & string
-> = RefinedValueGroups[T_Group][T_Name] extends { params: infer P }
-  ? P
-  : RefinedValueGroups[T_Group][T_Name] extends {}
-  ? undefined
-  : never;
-
-export type ValueParams<
-  T_Group extends ValueGroupName,
-  T_Value extends ValueName<T_Group>,
-  T_GenericParamA
-> = CustomValueParams<T_Group, T_Value, T_GenericParamA> extends never
-  ? MakeOptionalWhereUndefined<Evaluate<DefaultValueParams<T_Group, T_Value>>> // Fall back to original params if ValueParameters resolves to never
-  : CustomValueParams<T_Group, T_Value, T_GenericParamA>;

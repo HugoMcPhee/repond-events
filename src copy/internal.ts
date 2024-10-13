@@ -193,8 +193,7 @@ export async function runEventHandler(liveEventId: string) {
 
   // Run the event handler
   if (evaluatedParams) {
-    eventHandler(evaluatedParams, liveInfo);
-    setState({ liveEvents: { [liveEventId]: { evaluatedParams } } });
+    eventHandler(paramsWithDefaults, liveInfo);
   } else {
     console.warn(
       `no evaluatedParams found for ${liveEventId} , ${eventTypeDefinition.group}.${eventTypeDefinition.name}`
@@ -335,7 +334,6 @@ export function _addEvents(eventIntances: EventBlock[], listOptions: EventBlockO
         canAutoActivate = true;
       }
 
-      // TODO needs parentChainId
       const newChainState: ItemState<"chains"> = { id: chainId, liveEventIds: [], canAutoActivate };
       addItem({ id: chainId, type: "chains", state: newChainState }, () => {});
     }

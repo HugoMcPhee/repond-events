@@ -26,11 +26,6 @@ export {
   MakeEventType,
   makeEventTypes,
   initEventTypeGroups,
-  makeValueTypes,
-  initValueTypeGroups,
-  makeValue,
-  makeValue as I_, // as an easy-to-read alias for makeValue
-  makeValue as V, // as an easy-to-read alias for makeValue
 } from "./helpers";
 
 export type {
@@ -48,8 +43,8 @@ export type {
   EventTypeDefinition,
   EventBlockTuple as EventTuple,
   EventParams,
-  CustomValueParams,
-  DefaultValueParams,
+  CustomEventParams,
+  DefaultEventParams,
 } from "./types";
 
 export const repondEventsStores = {

@@ -15,7 +15,7 @@ import {
 import { repondEventsMeta } from "./meta";
 import {
   ChainId,
-  DefaultValueParams,
+  DefaultEventParams,
   EmojiKeys,
   EventGroupName,
   EventBlockOptions,
@@ -28,12 +28,6 @@ import {
   RunModeExtraOptions,
   TypeOrUndefinedIfAllOptional,
   ValueTypeDefinition,
-  ValueGroupName,
-  ValueEmojiKeys,
-  ValueName,
-  ValueParams,
-  ValueBlock,
-  ValueBlockOptions,
 } from "./types";
 import { UnsetEmojiKeysType } from "./declarations";
 
@@ -337,52 +331,4 @@ export function initValueTypeGroups<T extends Record<string, ReturnType<typeof m
   repondEventsMeta.allValueTypeGroups = transformedGroups;
 
   return groups;
-}
-
-type OptionalIfUndefinableSpreadType_Value<T extends any> = T extends undefined
-  ? [T?, ValueBlockOptions?]
-  : [T, ValueBlockOptions?];
-
-type ExcludedOriginalValueKeys = {
-  [K in keyof EmojiKeys]: EmojiKeys[K];
-}[keyof EmojiKeys];
-
-type AcceptableValueKeys = Exclude<ValueGroupName, ExcludedOriginalValueKeys> | keyof ValueEmojiKeys;
-
-type ResolveValueType<T_Key extends AcceptableValueKeys> = ValueEmojiKeys extends UnsetEmojiKeysType
-  ? T_Key
-  : T_Key extends keyof ValueEmojiKeys
-  ? ValueEmojiKeys[T_Key]
-  : T_Key;
-
-// Returns an event block tuple, useful to get a typed event with auto-completion
-// meant to use with runEvents like runEvents([run("group", "name", params), run("group", "name", params)])
-export function makeValue<
-  T_Key extends AcceptableValueKeys,
-  // T_Group extends T_Key extends keyof EmojiKeys ? EmojiKeys[T_Key] : T_Key,
-  T_Group extends ResolveValueType<T_Key>,
-  T_Name extends ValueName<T_Group>,
-  T_GenericParamA
->(
-  groupOrEmoji: T_Key,
-  name: T_Name,
-  ...args: OptionalIfUndefinableSpreadType_Value<
-    TypeOrUndefinedIfAllOptional<ValueParams<T_Group, T_Name, T_GenericParamA>>
-  >
-) {
-  const group =
-    groupOrEmoji in repondEventsMeta.valueEmojiKeys
-      ? repondEventsMeta.emojiKeys[groupOrEmoji as keyof EmojiKeys]
-      : groupOrEmoji;
-  // ...params: OptionalIfUndefinableSpreadType<
-  //   TypeOrUndefinedIfAllOptional<EventParams<T_Group, T_Name, T_GenericParamA>>
-  // >,
-  // options?: EventBlockOptions
-  // Destructure args to get params and options
-  let params = args[0];
-  let options = args[1]; // This would be your EventBlockOptions or undefined
-
-  const valueBlock: ValueBlock = { group, name, params: params || {}, options: options ?? {}, type: "value" };
-
-  return valueBlock;
 }
