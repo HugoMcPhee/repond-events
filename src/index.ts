@@ -2,6 +2,7 @@ import { chainEffects } from "./effects/chains";
 import { liveEventEffects, liveEventParamEffects } from "./effects/liveEvents";
 import { chainsStore } from "./stores/chains";
 import { liveEventsStore } from "./stores/liveEvents";
+
 export {
   todo,
   todo as II, // as an easy-to-read alias for todo
@@ -32,6 +33,8 @@ export {
   makeValue as I_, // as an easy-to-read alias for makeValue
   makeValue as V, // as an easy-to-read alias for makeValue
 } from "./helpers";
+export { basicValues } from "./events/values/basic";
+export { basicEvents } from "./events/basic";
 
 export type {
   ChainId,

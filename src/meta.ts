@@ -1,6 +1,13 @@
 import { StatePath } from "repond";
 import { ChainId } from "./types";
 
+type FastChainInfoMapItem = {
+  nowChildFastChainId: ChainId;
+  isCanceled: boolean;
+  parentFastChainId: ChainId;
+  variablesMap: Record<string, any>;
+};
+
 export const repondEventsMeta = {
   // Events
   defaultElapsedTimePath: null as null | StatePath<any>,
@@ -10,4 +17,14 @@ export const repondEventsMeta = {
   // Values
   allValueTypeGroups: {} as Record<string, Record<string, any>>,
   valueEmojiKeys: {} as Record<string, string>,
+  // Variables
+  variablesByScopesMap: {} as Record<string, Record<string, any>>,
+  // Fast chains
+  fastChains: {
+    nowRootFastChainId: null as null | ChainId,
+    nowRootFastChainParentId: null as null | ChainId,
+    nowFastChainsInfoMap: {} as Record<ChainId, FastChainInfoMapItem>,
+    nowDescendantFastChainId: {} as Record<ChainId, ChainId[]>,
+    foundFastReturnValue: undefined as any,
+  },
 };

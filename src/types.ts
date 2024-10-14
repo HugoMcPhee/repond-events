@@ -57,6 +57,7 @@ export type EventRunLiveInfo = {
   runBy: string;
   addedBy: string;
   runMode: RunMode;
+  isFast: boolean; // if it should run as fast as possible, skipping lifecycles
   didStart: boolean;
   remainingTime: number;
   elapsedTime: number; // maybe rename to nowTime
@@ -92,7 +93,7 @@ export type EmojiKeys = RepondEventsTypes<any, any, any>["EmojiKeys"] extends ne
   ? Record<string, string>
   : RepondEventsTypes<any, any, any>["EmojiKeys"];
 
-  type OriginalValueGroups = RepondEventsTypes<any, any, any>["ValueGroups"];
+type OriginalValueGroups = RepondEventsTypes<any, any, any>["ValueGroups"];
 export type ValueEmojiKeys = RepondEventsTypes<any, any, any>["EmojiKeys"] extends never
   ? Record<string, string>
   : RepondEventsTypes<any, any, any>["EmojiKeys"];
@@ -191,12 +192,13 @@ export type ValueRunInfo = {
   parentChainId?: ChainId;
   runBy?: string;
   addedBy?: string;
+  isFast?: boolean;
 };
 
 export type ValueTypeDefinition<T_Params extends Record<any, any>> = {
   run: (evaluatedParams: T_Params, liveInfo: ValueRunInfo) => any; // NOTE will update this to have a typed return value later
   params: T_Params; // param definitions are required for now to make the typescript happier, but they dont have to be passed into runValue, since the defaults will be used
-  isParallel?: boolean;
+  // isParallel?: boolean;
   id?: string; // groupName_valueName , set automatically in initValueGroups
 };
 

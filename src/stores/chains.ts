@@ -13,6 +13,8 @@ function getDefaultState() {
     // addTime?
     canAutoActivate: true, // whether events in the chain can be auto started, starts as false for addSubEvents, and can be set to true to activate
     duplicateEventsToAdd: {} as Record<string, EventBlock>, // if an event is added, but the liveId already exists, it's added here, and that liveEvent will be canceled , once that event is removed, this event will be added to the end of the chain
+    //
+    variablesByName: {} as Record<string, any>, // variables that are set in the chain
   };
 }
 
