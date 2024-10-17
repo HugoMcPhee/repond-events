@@ -1,5 +1,8 @@
 import { getVariable } from "../../variableHelpers";
-import { makeValueTypes } from "../../helpers";
+import { makeValue, makeValueTypes, runEvents } from "../../helpers";
+import { EventBlock } from "../../types";
+import { repondEventsMeta } from "../../meta";
+import { startNewEffect } from "repond";
 
 export const basicValues = makeValueTypes(({ value }) => ({
   combine: value({
@@ -18,7 +21,32 @@ export const basicValues = makeValueTypes(({ value }) => ({
     run: ({ name, scope }, { isFast }) => {
       return getVariable(name, scope, { isFast });
     },
-    params: { name: "", scope: "" },
+    params: {
+      name: "",
+      scope: { type: "value", group: "basic", name: "getMyChainId" } as unknown as string | undefined,
+      // scope: makeValue("basic", "getMyChainId") as unknown as string | undefined,
+    },
+  }),
+  getMyChainId: value({
+    run: ({}, { parentChainId }) => parentChainId,
+    params: {},
+  }),
+  // NOTE must pass parentChainId here for now to get scope? oh wait, it already has it from value run
+  getEventValue: value({
+    run: ({ events }, { parentChainId, valueId }) => {
+      // pass the parentChainId , and set the new chainId as the valueId
+
+      // Start a new promise, and store the resolve
+
+      // TODO Make it return a promise if it's non fast mode, and do the fast way seperately
+
+      return new Promise((resolve, reject) => {
+        repondEventsMeta.resolveValueMap[valueId] = resolve;
+        runEvents(events, { chainId: valueId, parentChainId });
+        // if the chain finishes, it will also resolve
+      });
+    },
+    params: { events: [] as EventBlock[] },
   }),
   //   getState: value({
   //     run: ({ statePath }, {}) => {

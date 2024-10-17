@@ -143,6 +143,8 @@ export type EventBlockTuple = {
   }[EventName<G>];
 }[EventGroupName];
 
+export type EventBlockTupleLoose = [string, string, Record<string, any>, EventBlockOptions];
+
 // Helper type to determine if all properties of a type are optional
 export type AllOptional<T> = {
   [P in keyof T]-?: undefined extends T[P] ? never : P;

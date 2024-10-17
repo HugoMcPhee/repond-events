@@ -1,5 +1,6 @@
+import { getState } from "repond";
 import { repondEventsMeta } from "./meta";
-import { EvaluateParamsInfo, ParamMap, RawValue, ValueBlock, ValueRunInfo } from "./types";
+import { ChainId, EvaluateParamsInfo, ParamMap, RawValue, ValueBlock, ValueRunInfo } from "./types";
 
 function isValueBlock(value: any): value is ValueBlock {
   return value && typeof value === "object" && value.type === "value" && "group" in value && "name" in value;
@@ -86,5 +87,19 @@ export function evaluateValueBlock(valueBlock: ValueBlock, valueRunInfo: ValueRu
   } else {
     const result = valueDefinition.run(evaluatedParamsOrPromise, valueRunInfo, valueBlock);
     return result;
+  }
+}
+
+// Search up chains until it finds one that's in the resolveValueMap
+// For non fast mode
+export function resolveNearestGetEventValue(initialChainId: ChainId, value: any) {
+  let chainId: string | null = initialChainId;
+  while (chainId) {
+    const chainState = getState().chains[chainId];
+    if (chainState && chainId in repondEventsMeta.resolveValueMap) {
+      repondEventsMeta.resolveValueMap[chainId]?.(value);
+      break;
+    }
+    chainId = chainState ? chainState.parentChainId : null;
   }
 }

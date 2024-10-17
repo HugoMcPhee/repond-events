@@ -6,7 +6,7 @@ import {
   _getStatesToRunEventsInMode,
   _makeLiveIdFromEventBlock,
   eventBlockBaseToEventBlock,
-  eventTuplesToEventBlock,
+  eventTuplesToEventBlocks,
   getChainIdFromLiveEventId,
   getLiveEventsIdsUpToLiveEventId,
   getLiveIdsForGroup,
@@ -34,6 +34,8 @@ import {
   ValueParams,
   ValueBlock,
   ValueBlockOptions,
+  EventBlock,
+  EventBlockTupleLoose,
 } from "./types";
 import { UnsetEmojiKeysType } from "./declarations";
 
@@ -81,9 +83,10 @@ export function todo<
   let params = args[0]; // This would be your number or undefined
   let options = args[1]; // This would be your EventBlockOptions or undefined
 
-  const eventTuple: EventBlockTuple = [group, name, params ?? {}, options] as EventBlockTuple;
+  // const eventTuple: EventBlockTuple = [group, name, params ?? {}, options] as EventBlockTuple;
+  const eventBlock: EventBlock = { group, name, params: params ?? {}, options } as EventBlock;
 
-  return eventTuple;
+  return eventBlock;
 }
 
 export function getChainState(chainId: ChainId) {
@@ -152,15 +155,16 @@ export function runPriorityEvent<T_Group extends EventGroupName, T_Name extends 
   return chainId;
 }
 
-export function runEvents<T_Events extends EventBlockTuple[]>(eventsToRun: T_Events, options?: EventBlockOptions) {
+export function runEvents<T_Events extends EventBlock[]>(eventsToRun: T_Events, options?: EventBlockOptions) {
   // NOTE _addEvents has onNextTick inside
 
   // NOTE adding a liveId will make the chain a subChain of the liveEvent
-  const chainId = _addEvents(eventTuplesToEventBlock(eventsToRun), { ...options });
+  // const chainId = _addEvents(eventTuplesToEventBlocks(eventsToRun), { ...options });
+  const chainId = _addEvents(eventsToRun, { ...options });
   return chainId;
 }
 
-export function addSubEvents<T_Events extends EventBlockTuple[]>(
+export function addSubEvents<T_Events extends EventBlock[]>(
   liveId: string,
   eventsToRun: T_Events,
   options?: EventBlockOptions
@@ -168,10 +172,7 @@ export function addSubEvents<T_Events extends EventBlockTuple[]>(
   runEvents(eventsToRun, { liveId, ...options });
 }
 
-export function runPriorityEvents<T_Events extends EventBlockTuple[]>(
-  eventsToRun: T_Events,
-  options?: EventBlockOptions
-) {
+export function runPriorityEvents<T_Events extends EventBlock[]>(eventsToRun: T_Events, options?: EventBlockOptions) {
   // NOTE runEvents runs _addEvents which has onNextTick inside
   return runEvents(eventsToRun, { hasPriority: true, ...options });
 }

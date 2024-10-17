@@ -1,6 +1,7 @@
 import { breakableForEach, forEach } from "chootils/dist/loops";
 import { ItemState, getItemWillExist, getState, makeEffects, removeItem, setState } from "repond";
 import { getActiveEventIds } from "../internal";
+import { repondEventsMeta } from "../meta";
 
 export const chainEffects = makeEffects(({ itemEffect, effect }) => ({
   whenLiveEventIdsChange: itemEffect({
@@ -13,6 +14,9 @@ export const chainEffects = makeEffects(({ itemEffect, effect }) => ({
       // Remove the chain if there's no liveEventIds left in the chain
       if (firstLiveEventIds.length === 0) {
         removeItem({ type: "chains", id: chainId });
+        // if there's a getEventValue that was waiting for a returnValue in the chain, but the chain ended,
+        // return null for the chain
+        repondEventsMeta.resolveValueMap[chainId]?.(undefined);
       }
 
       // Check which events should be active

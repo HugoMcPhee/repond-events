@@ -27,4 +27,6 @@ export const repondEventsMeta = {
     nowDescendantFastChainId: {} as Record<ChainId, ChainId[]>,
     foundFastReturnValue: undefined as any,
   },
+  // getEventValue
+  resolveValueMap: {}, // Record<ValueId, Resolve function>
 };

@@ -8,11 +8,11 @@ import {
   EventBlockWithIds,
   EventBlockBase,
   EventRunLiveInfo,
-  EventBlockTuple,
   EventTypeDefinition,
   RunMode,
   RunModeExtraOptions,
   ParamMap,
+  EventBlockTuple,
 } from "./types";
 import { evaluateParams } from "./valueHelpers";
 
@@ -41,8 +41,13 @@ export function eventTupleToEventBlock(eventTuple: EventBlockTuple): EventBlock 
   };
 }
 
-export function eventTuplesToEventBlock(eventTuples: EventBlockTuple[]): EventBlock[] {
-  return eventTuples.map(eventTupleToEventBlock);
+export function toEventBlockIfNeeded(event: EventBlockTuple | EventBlock): EventBlock {
+  return Array.isArray(event) ? eventTupleToEventBlock(event) : event;
+}
+
+export function eventTuplesToEventBlocks(eventTuples: (EventBlockTuple | EventBlock)[]): EventBlock[] {
+  // return eventTuples.map(eventTupleToEventBlock);
+  return eventTuples.map(toEventBlockIfNeeded);
 }
 
 export function getLiveIdsForGroup(state: AllState, group: string) {
@@ -115,6 +120,7 @@ export function getNewChainId() {
   return `chain_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 }
 
+// TODO maybe update the name to runLiveEventHandler because of isFast handling running events differently
 export async function runEventHandler(liveEventId: string) {
   const liveEventState = getLiveEventState(liveEventId);
   if (!liveEventState) return console.warn(`no liveEvent found for ${liveEventId}`);
@@ -153,6 +159,7 @@ export async function runEventHandler(liveEventId: string) {
     runBy: "repond-events",
     addedBy: liveEventState.addedBy ?? "unknown",
     runMode,
+    isFast: false, // TODO Support isFast, It might not ever be true in this part
     didStart: (liveEventState.startTime ?? 0) > 0, // a little different to isActive, if it started at all?
     chainId: liveEventState.chainId,
     liveId: liveEventState.id,
@@ -221,7 +228,7 @@ export function finalizeEvent(liveEventId: string) {
 }
 
 function _makeLiveEventStateFromEvent(event: EventBlockWithIds): ItemState<"liveEvents"> {
-  const { chainId, liveId, addedBy, isParallel, timePath, hasPriority, duration } = event.options;
+  const { chainId, liveId, addedBy, isParallel, timePath, hasPriority, duration, parentChainId } = event.options;
 
   const eventType = getEventTypeDefinition(event.group, event.name);
   let foundElapsedTime = 0;
@@ -246,6 +253,7 @@ function _makeLiveEventStateFromEvent(event: EventBlockWithIds): ItemState<"live
     duration: duration ?? null,
     addedBy: addedBy ?? null,
     chainId,
+    parentChainId,
     event,
     addTime: Date.now(),
     readyTime: null,
@@ -294,6 +302,8 @@ export function _addEvents(eventIntances: EventBlock[], listOptions: EventBlockO
   const liveId = listOptions.liveId;
   const chainId = liveId ?? listOptions.chainId ?? repondEventsMeta.defaultChainId ?? makeNewChainId();
 
+  const parentChainId = listOptions.parentChainId;
+
   const isForSubChain = !!liveId;
 
   const addTheLiveEvents = () => {
@@ -309,11 +319,11 @@ export function _addEvents(eventIntances: EventBlock[], listOptions: EventBlockO
           ...listOptions,
           liveId: undefined,
           ...event.options,
-          addedBy: event.options.addedBy ?? listOptions?.addedBy,
-          isParallel: event.options.isParallel ?? listOptions?.isParallel ?? eventType?.isParallel,
+          addedBy: event.options?.addedBy ?? listOptions?.addedBy,
+          isParallel: event.options?.isParallel ?? listOptions?.isParallel ?? eventType?.isParallel,
           chainId, // NOTE the chainId is always the same for all events added at once
-          timePath: event.options.timePath ?? listOptions.timePath ?? eventType?.timePath,
-          duration: event.options.duration ?? listOptions.duration ?? eventType?.duration,
+          timePath: event.options?.timePath ?? listOptions.timePath ?? eventType?.timePath,
+          duration: event.options?.duration ?? listOptions.duration ?? eventType?.duration,
         },
       };
     });
@@ -336,7 +346,7 @@ export function _addEvents(eventIntances: EventBlock[], listOptions: EventBlockO
       }
 
       // TODO needs parentChainId
-      const newChainState: ItemState<"chains"> = { id: chainId, liveEventIds: [], canAutoActivate };
+      const newChainState: ItemState<"chains"> = { id: chainId, liveEventIds: [], canAutoActivate, parentChainId };
       addItem({ id: chainId, type: "chains", state: newChainState }, () => {});
     }
 
