@@ -231,6 +231,26 @@ export function allEventsDo(runMode: RunMode, runOptions?: RunModeExtraOptions) 
 }
 
 // ---------------------------------------------
+
+export function cancelFastChain(chainId: ChainId) {
+  // set isCancelled to true,
+  // and while it can’t find another child in meta,
+  // keep setting children to isCanceled
+
+  const fastChainMeta = repondEventsMeta.fastChain.nowFastChainsInfoMap[chainId];
+  if (!fastChainMeta) return;
+
+  fastChainMeta.isCanceled = true;
+  let nextChildChainId = fastChainMeta.nowChildFastChainId;
+  while (nextChildChainId) {
+    const nextChildMeta = repondEventsMeta.fastChain.nowFastChainsInfoMap[nextChildChainId];
+    if (!nextChildMeta) break;
+    nextChildMeta.isCanceled = true;
+    nextChildChainId = nextChildMeta.nowChildFastChainId;
+  }
+}
+
+// ---------------------------------------------
 // Make Events
 
 function makeEventType<T_Params extends Record<any, any>>(event: EventTypeDefinition<T_Params>) {

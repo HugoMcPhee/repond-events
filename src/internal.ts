@@ -296,7 +296,59 @@ export function getEventTypeDefinition(group: string, name: string) {
   return meta.allEventTypeGroups[group]?.[name] as EventTypeDefinition<any>;
 }
 
-export function _addEvents(eventIntances: EventBlock[], listOptions: EventBlockOptions) {
+// Meant to be used for fast mode
+// in a loop until the chain is finished
+async function runEventFastMode(event: EventBlock, options: EventBlockOptions) {
+  // Finds and runs the event handler for the event
+  // it will always run immediately
+
+  const { chainId } = options;
+  if (!chainId) return console.warn(`no chainId found for fast ${event.group}.${event.name}`), {};
+
+  const eventTypeDefinition = meta.allEventTypeGroups[event.group]?.[event.name];
+  const eventHandler = eventTypeDefinition.run;
+
+  // let evaluatedParams: ParamMap | undefined | null = liveEventState.evaluatedParams;
+  const paramsWithDefaults = { ...eventTypeDefinition.params, ...event.params };
+
+  const evaluatedParams = await evaluateParams(paramsWithDefaults, {
+    addedBy: options.addedBy,
+    runBy: "repond-events",
+    parentChainId: options.parentChainId,
+    valueIdBase: chainId,
+  });
+
+  const liveInfo: EventRunLiveInfo = {
+    runBy: "repond-events",
+    addedBy: "unknown", // TODO maybe add addedBy for fast mode
+    runMode: "start",
+    isFast: true,
+    didStart: true,
+    chainId: chainId,
+    liveId: "unknown", // NOTE no live id in fast mode
+    remainingTime: 0,
+    elapsedTime: 0,
+    isUnpausing: false,
+    isUnsuspending: false,
+    isUnfreezing: false,
+    isFreezing: false,
+    isFirstAdd: true,
+    isFirstStart: true,
+    isFirstPause: false,
+    isFirstSuspend: false,
+    addTime: Date.now(),
+    startTime: Date.now(),
+    pauseTime: 0,
+    unpauseTime: 0,
+    suspendTime: 0,
+    unsuspendTime: 0,
+    goalEndTime: Date.now(),
+  };
+
+  await eventHandler(event.params, liveInfo);
+}
+
+export function _addEvents(eventBlocks: EventBlock[], listOptions: EventBlockOptions) {
   // If the parents liveEventId is provided, then it creates a chain with the same id, which makes it a subChain
   // This means the event will automatically finish when the subchain finishes
   const liveId = listOptions.liveId;
@@ -304,10 +356,64 @@ export function _addEvents(eventIntances: EventBlock[], listOptions: EventBlockO
 
   const parentChainId = listOptions.parentChainId;
 
+  const isFast = listOptions.isFast ?? false;
+
   const isForSubChain = !!liveId;
 
+  // If it's fast mode, it will run the events immediately
+  // and not add live events to the state
+  if (isFast) {
+    console.warn("fast mode not supported yet for _addEvents");
+    const fastChainMeta = repondEventsMeta.fastChain;
+
+    // If the parent chain is not a fast chain, then set up the new fastChain meta info
+    const parentChainIsFast = parentChainId ? !!fastChainMeta.nowFastChainsInfoMap[parentChainId] : false;
+
+    // If its the first fast chain, set the root fast chain id
+    if (!parentChainIsFast) {
+      fastChainMeta.nowRootFastChainId = chainId;
+      fastChainMeta.nowRootFastChainParentId = parentChainId;
+      fastChainMeta.nowFastChainsInfoMap = {};
+      fastChainMeta.nowFastChainsInfoMap[chainId] = {
+        nowChildFastChainId: undefined,
+        isCanceled: false,
+        parentFastChainId: undefined,
+        variablesMap: {},
+      };
+    } else {
+      // If the parent chain is a fast chain, then set up the new fastChain meta info
+      if (parentChainId) {
+        const parentFastChainInfo = fastChainMeta.nowFastChainsInfoMap[parentChainId];
+        parentFastChainInfo.nowChildFastChainId = chainId;
+      }
+      fastChainMeta.nowFastChainsInfoMap[chainId] = {
+        nowChildFastChainId: undefined,
+        isCanceled: false,
+        parentFastChainId: parentChainId,
+        variablesMap: {},
+      };
+    }
+
+    // Run through all the events in fast mode, while the chain isn't canceled
+    for (const event of eventBlocks) {
+      if (fastChainMeta.nowFastChainsInfoMap[chainId].isCanceled) {
+        break;
+      }
+      runEventFastMode(event, listOptions);
+    }
+
+    // If it's the first fast chain, when it finishes, clear the fast chain meta info
+    if (!parentChainIsFast) {
+      fastChainMeta.nowRootFastChainId = undefined;
+      fastChainMeta.nowRootFastChainParentId = undefined;
+      fastChainMeta.nowFastChainsInfoMap = {};
+    }
+
+    return chainId;
+  }
+
   const addTheLiveEvents = () => {
-    const events = eventIntances.map((event) => {
+    const events = eventBlocks.map((event) => {
       const eventType = getEventTypeDefinition(event.group, event.name);
       if (!eventType) {
         console.warn(`no eventType found for ${event.group}.${event.name}`);

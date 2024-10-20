@@ -2,9 +2,9 @@ import { StatePath } from "repond";
 import { ChainId } from "./types";
 
 type FastChainInfoMapItem = {
-  nowChildFastChainId: ChainId;
+  nowChildFastChainId?: ChainId;
   isCanceled: boolean;
-  parentFastChainId: ChainId;
+  parentFastChainId?: ChainId;
   variablesMap: Record<string, any>;
 };
 
@@ -20,12 +20,13 @@ export const repondEventsMeta = {
   // Variables
   variablesByScopesMap: {} as Record<string, Record<string, any>>,
   // Fast chains
-  fastChains: {
-    nowRootFastChainId: null as null | ChainId,
-    nowRootFastChainParentId: null as null | ChainId,
+  fastChain: {
+    nowRootFastChainId: undefined as undefined | ChainId,
+    nowRootFastChainParentId: undefined as undefined | ChainId,
     nowFastChainsInfoMap: {} as Record<ChainId, FastChainInfoMapItem>,
     nowDescendantFastChainId: {} as Record<ChainId, ChainId[]>,
     foundFastReturnValue: undefined as any,
+    getEventValueChainId: undefined as undefined | ChainId,
   },
   // getEventValue
   resolveValueMap: {}, // Record<ValueId, Resolve function>

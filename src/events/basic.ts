@@ -4,6 +4,8 @@ import { onNextTick, setState } from "repond";
 import { addSubEvents, makeEventTypes, makeValue, setLiveEventState, todo } from "../";
 import { setVariable } from "../variableHelpers";
 import { resolveNearestGetEventValue } from "../valueHelpers";
+import { repondEventsMeta } from "../meta";
+import { cancelFastChain, chainDo } from "../helpers";
 
 export const basicEvents = makeEventTypes(({ event }) => ({
   wait: event({
@@ -44,8 +46,19 @@ export const basicEvents = makeEventTypes(({ event }) => ({
 
       if (!isFast) {
         return new Promise((resolve) => {
-          if (isFirstStart) resolveNearestGetEventValue(chainId, value);
+          if (isFirstStart) {
+            const getEventValueChainId = resolveNearestGetEventValue(chainId, value);
+            if (getEventValueChainId) {
+              chainDo("cancel", getEventValueChainId);
+            }
+          }
         });
+      } else {
+        const fastChainMeta = repondEventsMeta.fastChain;
+        fastChainMeta.foundFastReturnValue = value;
+        const { getEventValueChainId } = fastChainMeta;
+        if (getEventValueChainId) cancelFastChain(getEventValueChainId);
+        fastChainMeta.getEventValueChainId = undefined;
       }
     },
     params: { value: undefined as any },

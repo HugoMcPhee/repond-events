@@ -1,5 +1,5 @@
 import { AllState, getState, setState } from "repond";
-import { repondEventsMeta } from "repond-events/src/meta";
+import { repondEventsMeta } from "./meta";
 
 export function setVariable(name: string, value: any, scope: string = "global", options: { isFast?: boolean } = {}) {
   const { isFast } = options;
@@ -26,11 +26,11 @@ export function setVariable(name: string, value: any, scope: string = "global", 
     }
   } else {
     // Fast case
-    if (scope !== "global" && scope in repondEventsMeta.fastChains.nowFastChainsInfoMap) {
+    if (scope !== "global" && scope in repondEventsMeta.fastChain.nowFastChainsInfoMap) {
       // Scope is a fast chain
       scopeIsFastChain = true;
       // Save to chain's variablesMap in meta
-      repondEventsMeta.fastChains.nowFastChainsInfoMap[scope].variablesMap[name] = value;
+      repondEventsMeta.fastChain.nowFastChainsInfoMap[scope].variablesMap[name] = value;
     }
   }
 
@@ -44,32 +44,35 @@ export function setVariable(name: string, value: any, scope: string = "global", 
   }
 }
 
-function findVariableInScope(name: string, scope: string = "global", isFast: boolean = false) {
+function findVariableInScope(name: string, scope: string = "global", startIsFast: boolean = false) {
   let foundVariable: any = undefined;
 
   if (scope !== "global") {
-    if (!isFast) {
-      // Search in the chain's state
-      let chainId: string | null = scope;
-      while (chainId) {
-        const chainState = getState().chains[chainId];
-        if (chainState && chainState.variablesByName && name in chainState.variablesByName) {
-          foundVariable = chainState.variablesByName[name];
-          break;
-        }
-        chainId = chainState ? chainState.parentChainId : null;
-      }
-    } else {
+    if (startIsFast) {
       // Search in the fast chains' meta
       let fastChainId: string | null = scope;
       while (fastChainId) {
-        const fastChainInfo = repondEventsMeta.fastChains.nowFastChainsInfoMap[fastChainId];
+        const fastChainInfo = repondEventsMeta.fastChain.nowFastChainsInfoMap[fastChainId];
         if (fastChainInfo && fastChainInfo.variablesMap && name in fastChainInfo.variablesMap) {
           foundVariable = fastChainInfo.variablesMap[name];
           break;
         }
         fastChainId = fastChainInfo ? fastChainInfo.parentFastChainId : null;
       }
+    }
+
+    // continue searching in non-fast chains, or start from the root non-fast chain
+    const rootNonFastChainId = startIsFast ? repondEventsMeta.fastChain.nowRootFastChainParentId : null;
+
+    // Search in the chain's state
+    let chainId: string | null = rootNonFastChainId ?? scope;
+    while (chainId) {
+      const chainState = getState().chains[chainId];
+      if (chainState && chainState.variablesByName && name in chainState.variablesByName) {
+        foundVariable = chainState.variablesByName[name];
+        break;
+      }
+      chainId = chainState ? chainState.parentChainId : null;
     }
   }
 

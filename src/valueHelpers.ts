@@ -94,12 +94,16 @@ export function evaluateValueBlock(valueBlock: ValueBlock, valueRunInfo: ValueRu
 // For non fast mode
 export function resolveNearestGetEventValue(initialChainId: ChainId, value: any) {
   let chainId: string | null = initialChainId;
+  let didResolve = false;
   while (chainId) {
     const chainState = getState().chains[chainId];
     if (chainState && chainId in repondEventsMeta.resolveValueMap) {
       repondEventsMeta.resolveValueMap[chainId]?.(value);
+      didResolve = true;
       break;
     }
     chainId = chainState ? chainState.parentChainId : null;
   }
+
+  return didResolve ? chainId : null;
 }

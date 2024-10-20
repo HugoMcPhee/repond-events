@@ -33,18 +33,24 @@ export const basicValues = makeValueTypes(({ value }) => ({
   }),
   // NOTE must pass parentChainId here for now to get scope? oh wait, it already has it from value run
   getEventValue: value({
-    run: ({ events }, { parentChainId, valueId }) => {
+    run: ({ events }, { parentChainId, valueId, isFast }) => {
       // pass the parentChainId , and set the new chainId as the valueId
 
       // Start a new promise, and store the resolve
 
       // TODO Make it return a promise if it's non fast mode, and do the fast way seperately
 
-      return new Promise((resolve, reject) => {
-        repondEventsMeta.resolveValueMap[valueId] = resolve;
-        runEvents(events, { chainId: valueId, parentChainId });
-        // if the chain finishes, it will also resolve
-      });
+      if (!isFast) {
+        return new Promise((resolve, reject) => {
+          repondEventsMeta.resolveValueMap[valueId] = resolve;
+          runEvents(events, { chainId: valueId, parentChainId });
+          // if the chain finishes, it will also resolve
+        });
+      } else {
+        runEvents(events, { chainId: valueId, parentChainId, isFast });
+        repondEventsMeta.fastChain.getEventValueChainId = valueId;
+        return repondEventsMeta.fastChain.foundFastReturnValue;
+      }
     },
     params: { events: [] as EventBlock[] },
   }),
