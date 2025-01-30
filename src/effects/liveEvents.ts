@@ -178,7 +178,7 @@ export const liveEventParamEffects = makeParamEffects({ liveId: "" }, ({ effect,
         const elapsedTime = (getState(timePathType, timePathId) as any)?.[timePathProp];
         if (elapsedTime === undefined) return;
         const liveEventState = getState("liveEvents", liveId);
-        const liveEventRefs = getRefs().liveEvents[liveId];
+        const liveEventRefs = getRefs("liveEvents", liveId);
         if (!liveEventState || !liveEventRefs) return;
         const { goalEndTime, startTime, nowRunMode } = liveEventState;
         if (
