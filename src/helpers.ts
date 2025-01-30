@@ -1,5 +1,5 @@
 import { forEach } from "chootils/dist/loops";
-import { AllState, ItemState, ItemType, StatePath, getState, onNextTick, setState } from "repond";
+import { AllState, ItemState, ItemType, StatePath, getState, onNextTick, setState, setState_OLD } from "repond";
 import {
   _addEvent,
   _addEvents,
@@ -90,19 +90,19 @@ export function todo<
 }
 
 export function getChainState(chainId: ChainId) {
-  return getState().chains[chainId];
+  return getState("chains", chainId);
 }
 
 export function getLiveEventState(liveEventId: string) {
-  return getState().liveEvents[liveEventId];
+  return getState("liveEvents", liveEventId);
 }
 
 export function setLiveEventState(liveEventId: string, state: Partial<ItemState<"liveEvents">>) {
-  setState({ liveEvents: { [liveEventId]: state } });
+  setState_OLD({ liveEvents: { [liveEventId]: state } });
 }
 
 export function setChainState(chainId: ChainId, state: Partial<ItemState<"chains">>) {
-  setState({ chains: { [chainId]: state } });
+  setState_OLD({ chains: { [chainId]: state } });
 }
 
 // ---------------------------------------------
@@ -179,18 +179,18 @@ export function runPriorityEvents<T_Events extends EventBlock[]>(eventsToRun: T_
 
 export function eventDo(runMode: RunMode, liveId: string, runOptions?: RunModeExtraOptions) {
   onNextTick(() => {
-    setState((state) => _getStatesToRunEventsInMode({ state, runMode, targetLiveIds: [liveId], runOptions }));
+    setState_OLD((state) => _getStatesToRunEventsInMode({ state, runMode, targetLiveIds: [liveId], runOptions }));
   });
 }
 
 export function chainDo(runMode: RunMode, chainId: ChainId, runOptions?: RunModeExtraOptions) {
   onNextTick(() => {
-    setState((state) => _getStatesToRunEventsInMode({ state, runMode, chainId, runOptions }));
+    setState_OLD((state) => _getStatesToRunEventsInMode({ state, runMode, chainId, runOptions }));
   });
 }
 
 export function chainWithEventDo(runMode: RunMode, liveId: string, runOptions?: RunModeExtraOptions) {
-  setState((state) => {
+  setState_OLD((state) => {
     const chainId = getChainIdFromLiveEventId(state, liveId);
     // `no chain found for ${liveId}`
     if (!chainId) return undefined;
@@ -200,7 +200,7 @@ export function chainWithEventDo(runMode: RunMode, liveId: string, runOptions?: 
 
 export function allGroupEventsDo(groupName: string, runMode: RunMode, runOptions?: RunModeExtraOptions) {
   onNextTick(() => {
-    setState((state) => {
+    setState_OLD((state) => {
       const targetLiveIds = getLiveIdsForGroup(state, groupName);
       return _getStatesToRunEventsInMode({ state, runMode, targetLiveIds, runOptions });
     });
@@ -209,7 +209,7 @@ export function allGroupEventsDo(groupName: string, runMode: RunMode, runOptions
 
 export function doForAllBeforeEvent(runMode: RunMode, liveId: string, runOptions?: RunModeExtraOptions) {
   onNextTick(() => {
-    setState((state) => {
+    setState_OLD((state) => {
       const targetLiveIds = getLiveEventsIdsUpToLiveEventId(state, liveId);
       return _getStatesToRunEventsInMode({ state, runMode, targetLiveIds, runOptions });
     });
@@ -224,7 +224,7 @@ export function cancelUpToEvent(liveId: string, runOptions?: RunModeExtraOptions
 }
 
 export function allEventsDo(runMode: RunMode, runOptions?: RunModeExtraOptions) {
-  setState((state) => {
+  setState_OLD((state) => {
     const targetLiveIds = Object.keys(state.liveEvents);
     return _getStatesToRunEventsInMode({ state, runMode, targetLiveIds, runOptions });
   });

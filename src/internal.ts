@@ -1,5 +1,16 @@
 import { breakableForEach, forEach } from "chootils/dist/loops";
-import { AllState, ItemState, addItem, getItemWillExist, getState, onNextTick, removeItem, setState } from "repond";
+import {
+  AllState,
+  ItemState,
+  addItem,
+  getItemWillExist,
+  getState,
+  getState_OLD,
+  onNextTick,
+  removeItem,
+  setState,
+  whenSettingStates,
+} from "repond";
 import { getChainState, getLiveEventState } from "./helpers";
 import { repondEventsMeta as meta, repondEventsMeta } from "./meta";
 import {
@@ -27,7 +38,7 @@ export function getElapsedTime(liveId?: string) {
   const [itemType, itemId, itemProp] = foundElapsedTimeStatePath;
 
   // Using any since the item type is dynamic
-  const foundElapsedTime = (getState() as any)[itemType]?.[itemId]?.[itemProp] as number | undefined;
+  const foundElapsedTime = (getState(itemType, itemId) as any)?.[itemProp] as number | undefined;
   if (!foundElapsedTime) return console.warn("no elapsedTime state found for ", itemType, itemId, itemProp), 0;
   return foundElapsedTime;
 }
@@ -107,7 +118,7 @@ export function getChainIdFromLiveEventId(state: AllState, liveId: string) {
   let foundChainId: string | undefined;
   const allChainIds = Object.keys(state.chains);
   breakableForEach(allChainIds, (chainId) => {
-    const chainState = getState().chains[chainId];
+    const chainState = getState("chains", chainId);
     if (chainState?.liveEventIds.includes(liveId)) {
       foundChainId = chainId;
       return true; // break from the loop
@@ -201,7 +212,7 @@ export async function runEventHandler(liveEventId: string) {
   // Run the event handler
   if (evaluatedParams) {
     eventHandler(evaluatedParams, liveInfo);
-    setState({ liveEvents: { [liveEventId]: { evaluatedParams } } });
+    setState(`liveEvents.evaluatedParams`, evaluatedParams, liveEventId);
   } else {
     console.warn(
       `no evaluatedParams found for ${liveEventId} , ${eventTypeDefinition.group}.${eventTypeDefinition.name}`
@@ -210,21 +221,19 @@ export async function runEventHandler(liveEventId: string) {
 }
 
 export function finalizeEvent(liveEventId: string) {
-  setState(
-    (state) => {
-      const liveEventState = state.liveEvents[liveEventId];
-      if (!liveEventState) return console.warn(`no liveEvent found for ${liveEventId}`), {};
-      const chainId = liveEventState.chainId;
-      if (!chainId) return {}; // `no chain found for ${liveEventId}`
-      const chainState = state.chains[chainId];
-      if (!chainState) return {}; // `no chain found for ${chainId}`
+  whenSettingStates(() => {
+    const liveEventState = getState("liveEvents", liveEventId);
+    if (!liveEventState) return console.warn(`no liveEvent found for ${liveEventId}`), {};
+    const chainId = liveEventState.chainId;
+    if (!chainId) return {}; // `no chain found for ${liveEventId}`
+    const chainState = getState("chains", chainId);
+    if (!chainState) return {}; // `no chain found for ${chainId}`
 
-      // Remove this liveEventId from the chain
-      const newLiveEventIds = chainState.liveEventIds.filter((id) => id !== liveEventId);
-      return { chains: { [chainId]: { liveEventIds: newLiveEventIds } } };
-    },
-    () => removeItem({ type: "liveEvents", id: liveEventId })
-  );
+    // Remove this liveEventId from the chain
+    const newLiveEventIds = chainState.liveEventIds.filter((id) => id !== liveEventId);
+    setState(`chains.liveEventIds`, newLiveEventIds, chainId);
+  });
+  onNextTick(() => removeItem({ type: "liveEvents", id: liveEventId }));
 }
 
 function _makeLiveEventStateFromEvent(event: EventBlockWithIds): ItemState<"liveEvents"> {
@@ -236,7 +245,7 @@ function _makeLiveEventStateFromEvent(event: EventBlockWithIds): ItemState<"live
   if (foundElapsedTimeStatePath) {
     const [itemType, itemId, itemProp] = foundElapsedTimeStatePath;
     // Using any since the item type is dynamic
-    foundElapsedTime = ((getState() as any)[itemType]?.[itemId]?.[itemProp] as number | undefined) ?? 0;
+    foundElapsedTime = ((getState(itemType, itemId) as any)?.[itemProp] as number | undefined) ?? 0;
   }
 
   // Finish instantly by default, can set to Infinity for no automatic end
@@ -437,7 +446,7 @@ export function _addEvents(eventBlocks: EventBlock[], listOptions: EventBlockOpt
     const chainDoesntExist = !getItemWillExist("chains", chainId);
 
     // Check if the parent liveEvent is already running
-    const existingParentLiveEventForSubChain = liveId ? getState().liveEvents[liveId] : null;
+    const existingParentLiveEventForSubChain = liveId ? getState("liveEvents", liveId) : null;
     const parentLiveEventRunMode = existingParentLiveEventForSubChain?.nowRunMode ?? null;
     const parentLiveEventHasNonAddRunMode = liveId ? parentLiveEventRunMode && parentLiveEventRunMode !== "add" : false;
 
@@ -479,15 +488,15 @@ export function _addEvents(eventBlocks: EventBlock[], listOptions: EventBlockOpt
       addItem({ id: liveId, type: "liveEvents", state: _makeLiveEventStateFromEvent(eventWithLiveId) });
     });
 
-    setState((state) => {
-      const chainState = state.chains[chainId];
+    whenSettingStates(() => {
+      const chainState = getState("chains", chainId);
 
       // NOTE make sure the chain is added before setting the chain state
       if (!chainState) return console.warn(`chain ${chainId} doesn't exist`), {};
 
       const nowChainEventIds = chainState.liveEventIds;
       const newChainEventIds = listOptions.hasPriority
-        ? getInsertEventIdsAfterActive(state, nowChainEventIds, newLiveIds)
+        ? getInsertEventIdsAfterActive(getState_OLD(), nowChainEventIds, newLiveIds)
         : [...nowChainEventIds, ...newLiveIds];
 
       const newPartialChainState: Record<string, Partial<ItemState<"chains">>> = {
@@ -509,8 +518,8 @@ export function _addEvents(eventBlocks: EventBlock[], listOptions: EventBlockOpt
       const liveEventsToCancel = Object.keys(chainState.duplicateEventsToAdd);
       liveEventsToCancel.forEach((liveId) => {
         const event = chainState.duplicateEventsToAdd[liveId];
-        const eventState = state.liveEvents[liveId];
-        if (!eventState) return console.warn(`no liveEvent found for ${liveId}`), {};
+        const eventState = getState("liveEvents", liveId);
+        if (!eventState) return console.warn(`no liveEvent found for ${liveId}`);
         newPartialLiveEventsState[liveId] = { nowRunMode: "cancel" };
       });
 

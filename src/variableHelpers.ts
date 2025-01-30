@@ -1,4 +1,4 @@
-import { AllState, getState, setState } from "repond";
+import { AllState, getState, getState_OLD, setState, whenSettingStates } from "repond";
 import { repondEventsMeta } from "./meta";
 
 export function setVariable(name: string, value: any, scope: string = "global", options: { isFast?: boolean } = {}) {
@@ -9,19 +9,13 @@ export function setVariable(name: string, value: any, scope: string = "global", 
 
   if (!isFast) {
     // Non-fast case
-    if (scope !== "global" && scope in getState().chains) {
+    if (scope !== "global" && scope in getState_OLD().chains) {
       // Scope is a chain
       scopeIsChain = true;
       // Save to chain's variablesByName in state
-      setState((state: AllState) => {
-        const variablesByName = state.chains[scope]?.variablesByName || {};
-        return {
-          chains: {
-            [scope]: {
-              variablesByName: { ...variablesByName, [name]: value },
-            },
-          },
-        };
+      whenSettingStates(() => {
+        const variablesByName = getState("chains", scope)?.variablesByName || {};
+        setState(`chains.variablesByName`, { ...variablesByName, [name]: value }, scope);
       });
     }
   } else {
@@ -67,7 +61,7 @@ function findVariableInScope(name: string, scope: string = "global", startIsFast
     // Search in the chain's state
     let chainId: string | null = rootNonFastChainId ?? scope;
     while (chainId) {
-      const chainState = getState().chains[chainId];
+      const chainState = getState("chains", chainId);
       if (chainState && chainState.variablesByName && name in chainState.variablesByName) {
         foundVariable = chainState.variablesByName[name];
         break;

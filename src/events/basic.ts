@@ -1,7 +1,7 @@
 // this exports internal events like "runEvents"
 
-import { onNextTick, setState } from "repond";
-import { addSubEvents, makeEventTypes, makeValue, setLiveEventState, todo } from "../";
+import { onNextTick, setState, setState_OLD } from "repond";
+import { addSubEvents, makeEventTypes, makeValue, todo } from "../";
 import { setVariable } from "../variableHelpers";
 import { resolveNearestGetEventValue } from "../valueHelpers";
 import { repondEventsMeta } from "../meta";
@@ -12,7 +12,7 @@ export const basicEvents = makeEventTypes(({ event }) => ({
     run: ({ duration }, { runMode, liveId, elapsedTime }) => {
       // if (runMode === "add") console.log("wait added");
 
-      if (runMode === "start") setLiveEventState(liveId, { goalEndTime: elapsedTime + duration });
+      if (runMode === "start") setState(`liveEvents.goalEndTime`, elapsedTime + duration, liveId);
     },
     params: { duration: 1000 },
     isParallel: false,
@@ -27,7 +27,7 @@ export const basicEvents = makeEventTypes(({ event }) => ({
   }),
   setState: event({
     run: ({ state }, { runMode, isFirstStart }) => {
-      if (isFirstStart) onNextTick(() => setState(state));
+      if (isFirstStart) onNextTick(() => setState_OLD(state));
     },
     params: { state: {} as Parameters<typeof setState>[0] },
     isParallel: false,

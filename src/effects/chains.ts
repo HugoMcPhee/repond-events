@@ -1,12 +1,21 @@
 import { breakableForEach, forEach } from "chootils/dist/loops";
-import { ItemState, getItemWillExist, getState, makeEffects, removeItem, setState } from "repond";
+import {
+  ItemState,
+  getItemWillExist,
+  getState,
+  getState_OLD,
+  makeEffects,
+  removeItem,
+  setState,
+  whenSettingStates,
+} from "repond";
 import { getActiveEventIds } from "../internal";
 import { repondEventsMeta } from "../meta";
 
 export const chainEffects = makeEffects(({ itemEffect, effect }) => ({
   whenLiveEventIdsChange: itemEffect({
     run: ({ itemId: chainId }) => {
-      const nowChainState = getState().chains[chainId];
+      const nowChainState = getState("chains", chainId);
       if (!nowChainState) return;
       const { liveEventIds: firstLiveEventIds, canAutoActivate } = nowChainState;
       const isSubChain = getItemWillExist("liveEvents", chainId);
@@ -20,10 +29,10 @@ export const chainEffects = makeEffects(({ itemEffect, effect }) => ({
       }
 
       // Check which events should be active
-      setState((state) => {
-        const { liveEventIds } = state.chains[chainId] ?? {};
+      whenSettingStates(() => {
+        const { liveEventIds } = getState("chains", chainId) ?? {};
 
-        let idsToActivate: string[] = getActiveEventIds(state, liveEventIds ?? []);
+        let idsToActivate: string[] = getActiveEventIds(getState_OLD(), liveEventIds ?? []);
 
         let partialLiveEventsState: Record<string, Partial<ItemState<"liveEvents">>> = {};
         let partialChainsState: Record<string, Partial<ItemState<"chains">>> = {};
@@ -32,7 +41,7 @@ export const chainEffects = makeEffects(({ itemEffect, effect }) => ({
           let foundNonAddEvent = false;
 
           breakableForEach(idsToActivate, (id) => {
-            const loopedRunMode = state.events?.[id]?.nowRunMode;
+            const loopedRunMode = getState("events", id)?.nowRunMode;
             if (loopedRunMode && loopedRunMode !== "add") {
               foundNonAddEvent = true;
               return true; // break
@@ -56,7 +65,7 @@ export const chainEffects = makeEffects(({ itemEffect, effect }) => ({
         }
 
         breakableForEach(idsToActivate, (id) => {
-          const liveEventState = state.liveEvents[id];
+          const liveEventState = getState("liveEvents", id);
 
           if (!liveEventState) return;
 
