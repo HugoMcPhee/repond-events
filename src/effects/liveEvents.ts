@@ -24,8 +24,7 @@ export const liveEventEffects = makeEffects(({ itemEffect, effect }) => ({
       forEach(removedLiveIds, (liveId) => {
         stopParamEffect("liveEvent", "whenElapsedTimeChanges", { liveId });
         // Check if the liveIds chain had
-        const prevState = getPrevState();
-        const chainId: string = prevState.liveEvents[liveId]?.chainId;
+        const chainId: string = getPrevState("liveEvents", liveId)?.chainId;
 
         if (!chainId) return;
         const chainState = getState("chains", chainId);

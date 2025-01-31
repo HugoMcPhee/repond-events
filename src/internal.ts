@@ -499,19 +499,20 @@ export function _addEvents(eventBlocks: EventBlock[], listOptions: EventBlockOpt
         ? getInsertEventIdsAfterActive(getState_OLD(), nowChainEventIds, newLiveIds)
         : [...nowChainEventIds, ...newLiveIds];
 
-      const newPartialChainState: Record<string, Partial<ItemState<"chains">>> = {
-        [chainId]: {
-          liveEventIds: newChainEventIds,
-          duplicateEventsToAdd: { ...chainState.duplicateEventsToAdd, ...newDuplicateLiveEventsMap },
-        },
-      };
-      const newPartialLiveEventsState: Record<string, Partial<ItemState<"liveEvents">>> = {};
+      setState("chains.liveEventIds", newChainEventIds, chainId);
+      setState(
+        "chains.duplicateEventsToAdd",
+        { ...chainState.duplicateEventsToAdd, ...newDuplicateLiveEventsMap },
+        chainId
+      );
 
       // If events are added to a subChain, set the goalEndTime for the parent event to Infinity, to wait for the subChain to finish
       if (isForSubChain) {
-        newPartialLiveEventsState[chainId] = { goalEndTime: Infinity };
+        setState("liveEvents.goalEndTime", Infinity, chainId);
         if (parentLiveEventHasNonAddRunMode && parentLiveEventRunMode !== "start") {
-          forEach(newChainEventIds, (liveId) => (newPartialLiveEventsState[liveId] = { nowRunMode: "add" }));
+          forEach(newChainEventIds, (liveId) => {
+            setState("liveEvents.nowRunMode", "add", liveId);
+          });
         }
       }
 
@@ -520,10 +521,8 @@ export function _addEvents(eventBlocks: EventBlock[], listOptions: EventBlockOpt
         const event = chainState.duplicateEventsToAdd[liveId];
         const eventState = getState("liveEvents", liveId);
         if (!eventState) return console.warn(`no liveEvent found for ${liveId}`);
-        newPartialLiveEventsState[liveId] = { nowRunMode: "cancel" };
+        setState("liveEvents.nowRunMode", "cancel", liveId);
       });
-
-      return { chains: newPartialChainState, liveEvents: newPartialLiveEventsState };
     });
   };
   if (isForSubChain && getItemWillExist("liveEvents", liveId)) {
