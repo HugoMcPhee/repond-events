@@ -12,9 +12,9 @@ import {
 import { getActiveEventIds } from "../internal";
 import { repondEventsMeta } from "../meta";
 
-export const chainEffects = makeEffects(({ itemEffect, effect }) => ({
-  whenLiveEventIdsChange: itemEffect({
-    run: ({ itemId: chainId }) => {
+export const chainEffects = makeEffects((then) => ({
+  whenLiveEventIdsChange: then(
+    (chainId) => {
       const nowChainState = getState("chains", chainId);
       if (!nowChainState) return;
       const { liveEventIds: firstLiveEventIds, canAutoActivate } = nowChainState;
@@ -46,6 +46,9 @@ export const chainEffects = makeEffects(({ itemEffect, effect }) => ({
 
           breakableForEach(idsToActivate, (id) => {
             const loopedRunMode = getState("events", id)?.nowRunMode;
+            if (!loopedRunMode) {
+              console.log("no loopedRunMode: id", id);
+            }
             if (loopedRunMode && loopedRunMode !== "add") {
               foundNonAddEvent = true;
               return true; // break
@@ -103,7 +106,9 @@ export const chainEffects = makeEffects(({ itemEffect, effect }) => ({
         });
       });
     },
-    check: { type: "chains", prop: ["liveEventIds", "canAutoActivate"] },
-    step: "eventUpdates",
-  }),
+    {
+      changes: ["chains.liveEventIds", "chains.canAutoActivate"],
+      step: "eventUpdates",
+    }
+  ),
 }));

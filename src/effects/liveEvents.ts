@@ -14,9 +14,9 @@ import { _addEvents, finalizeEvent, getElapsedTime, getEventTypeDefinition, runE
 import { repondEventsMeta } from "../meta";
 import { EventBlock } from "../types";
 
-export const liveEventEffects = makeEffects(({ itemEffect, effect }) => ({
-  whenLiveEventAddedOrRemoved: effect({
-    run: (diffInfo) => {
+export const liveEventEffects = makeEffects((then) => ({
+  whenLiveEventAddedOrRemoved: then(
+    (_, diffInfo) => {
       const addedLiveIds = diffInfo.itemsAdded.liveEvents;
       const removedLiveIds = diffInfo.itemsRemoved.liveEvents;
 
@@ -47,12 +47,19 @@ export const liveEventEffects = makeEffects(({ itemEffect, effect }) => ({
         // onNextTick
       });
     },
-    check: { type: "liveEvents", addedOrRemoved: true },
-    atStepEnd: false,
-    step: "eventUpdates",
-  }),
-  whenNowRunModeChanges: itemEffect({
-    run: ({ itemState, itemId: liveId, newValue: latestRunMode, prevValue: prevRunMode }) => {
+    {
+      changes: ["liveEvents.__added", "liveEvents.__removed"],
+      atStepEnd: false,
+      step: "eventUpdates",
+      isPerItem: false,
+    }
+  ),
+  whenNowRunModeChanges: then(
+    (liveId) => {
+      const itemState = getState("liveEvents", liveId) ?? {};
+      const { nowRunMode: latestRunMode } = itemState;
+      const prevRunMode = getPrevState("liveEvents", liveId)?.nowRunMode;
+
       const nowTime = Date.now();
       const { addTime } = itemState;
       // console.log(liveId, prevRunMode, ">", latestRunMode);
@@ -144,21 +151,25 @@ export const liveEventEffects = makeEffects(({ itemEffect, effect }) => ({
         finalizeEvent(liveId);
       }
     },
-    check: { type: "liveEvents", prop: "nowRunMode" },
-    atStepEnd: false, // NOTE may need to set runType in onNextTick so all other effects can see it changed
-    runAtStart: true,
-    step: "eventUpdates",
-  }),
+    {
+      changes: ["liveEvents.nowRunMode"],
+      atStepEnd: false, // NOTE may need to set runType in onNextTick so all other effects can see it changed
+      runAtStart: true,
+      step: "eventUpdates",
+    }
+  ),
 }));
 
 // We want to start a param effect when a liveEvent starts, and stop it when the liveEvent ends (is removed)
-export const liveEventParamEffects = makeParamEffects({ liveId: "" }, ({ effect, params: { liveId } }) => {
+export const liveEventParamEffects = makeParamEffects({ liveId: "" }, (then, params) => {
   const defaultReturn = {
-    whenElapsedTimeChanges: effect({
-      run: () => console.warn("no timePath", elapsedTimePath),
-      check: { type: "liveEvents", addedOrRemoved: true },
+    whenElapsedTimeChanges: then(() => console.warn("no timePath", elapsedTimePath), {
+      changes: ["liveEvents.__added", "liveEvents.__removed"],
+      isPerItem: false,
     }),
   };
+
+  const { liveId } = params;
 
   const elapsedTimePath = getState("liveEvents", liveId)?.elapsedTimePath ?? repondEventsMeta.defaultElapsedTimePath;
 
@@ -172,8 +183,8 @@ export const liveEventParamEffects = makeParamEffects({ liveId: "" }, ({ effect,
   }
 
   return {
-    whenElapsedTimeChanges: effect({
-      run: () => {
+    whenElapsedTimeChanges: then(
+      () => {
         const elapsedTime = (getState(timePathType, timePathId) as any)?.[timePathProp];
         if (elapsedTime === undefined) return;
         const liveEventState = getState("liveEvents", liveId);
@@ -196,8 +207,12 @@ export const liveEventParamEffects = makeParamEffects({ liveId: "" }, ({ effect,
           stopParamEffect("liveEvent", "whenElapsedTimeChanges", { liveId }); // stop this effect from running
         }
       },
-      check: { type: timePathType, id: timePathId, prop: timePathProp as any },
-      step: "eventUpdates",
-    }),
+      {
+        changes: [`${timePathType}.${timePathProp}`],
+        itemIds: [timePathId],
+        step: "eventUpdates",
+        isPerItem: false,
+      }
+    ),
   };
 });
