@@ -1,11 +1,11 @@
 // this exports internal events like "runEvents"
 
-import { onNextTick, setState, setState_OLD } from "repond";
-import { addSubEvents, makeEventTypes, makeValue, todo } from "../";
-import { setVariable } from "../variableHelpers";
-import { resolveNearestGetEventValue } from "../valueHelpers";
-import { repondEventsMeta } from "../meta";
+import { onNextTick, setState } from "repond";
+import { makeEventTypes, makeValue } from "../";
 import { cancelFastChain, chainDo } from "../helpers";
+import { repondEventsMeta } from "../meta";
+import { resolveNearestGetEventValue } from "../valueHelpers";
+import { setVariable } from "../variableHelpers";
 
 export const basicEvents = makeEventTypes(({ event }) => ({
   wait: event({
@@ -26,10 +26,14 @@ export const basicEvents = makeEventTypes(({ event }) => ({
     isParallel: false,
   }),
   setState: event({
-    run: ({ state }, { runMode, isFirstStart }) => {
-      if (isFirstStart) onNextTick(() => setState_OLD(state));
+    run: ({ prop, newValue, itemId }, { runMode, isFirstStart }) => {
+      if (isFirstStart) onNextTick(() => setState(prop, newValue, itemId));
     },
-    params: { state: {} as Parameters<typeof setState>[0] },
+    params: {
+      prop: "default" as Parameters<typeof setState>[0],
+      newValue: undefined as unknown as Parameters<typeof setState>[1],
+      itemId: undefined as Parameters<typeof setState>[2],
+    },
     isParallel: false,
   }),
   setVariable: event({

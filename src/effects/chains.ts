@@ -1,14 +1,5 @@
 import { breakableForEach, forEach } from "chootils/dist/loops";
-import {
-  ItemState,
-  getItemWillExist,
-  getState,
-  getState_OLD,
-  makeEffects,
-  removeItem,
-  setState,
-  whenSettingStates,
-} from "repond";
+import { ItemState, getItemWillExist, getState, makeEffects, removeItem, setState, whenSettingStates } from "repond";
 import { getActiveEventIds } from "../internal";
 import { repondEventsMeta } from "../meta";
 
@@ -35,7 +26,7 @@ export const chainEffects = makeEffects((then) => ({
 
         const { liveEventIds } = chainState;
 
-        let idsToActivate: string[] = getActiveEventIds(getState_OLD(), liveEventIds ?? []);
+        let idsToActivate: string[] = getActiveEventIds(liveEventIds ?? []);
 
         // NOTE these are only for reference! we don't use this to set state directly
         let newLiveEventsState: Record<string, Partial<ItemState<"liveEvents">>> = {};

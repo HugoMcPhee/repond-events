@@ -55,7 +55,7 @@ export const basicValues = makeValueTypes(({ value }) => ({
   }),
   //   getState: value({
   //     run: ({ statePath }, {}) => {
-  //       if (isFirstStart) onNextTick(() => setState_OLD(state));
+  //       if (isFirstStart) onNextTick(() => getState_OLD());
   //     },
   //     params: { statePath: {} as Parameters<typeof setState>[0] },
   //     isParallel: false,

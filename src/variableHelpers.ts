@@ -1,4 +1,4 @@
-import { AllState, getState, getState_OLD, setState, whenSettingStates } from "repond";
+import { getItemIds, getState, setState, whenSettingStates } from "repond";
 import { repondEventsMeta } from "./meta";
 
 export function setVariable(name: string, value: any, scope: string = "global", options: { isFast?: boolean } = {}) {
@@ -9,7 +9,8 @@ export function setVariable(name: string, value: any, scope: string = "global", 
 
   if (!isFast) {
     // Non-fast case
-    if (scope !== "global" && scope in getState_OLD().chains) {
+    const chainIds = getItemIds("chains");
+    if (scope !== "global" && chainIds.includes(scope)) {
       // Scope is a chain
       scopeIsChain = true;
       // Save to chain's variablesByName in state
