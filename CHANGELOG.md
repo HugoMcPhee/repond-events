@@ -1,6 +1,8 @@
 TODO
 
--
+- v0.3.0
+- Use repond 1.0.1!
+- start adding values
 
 - v0.2.9
 - Fix types when not using emoji keys
