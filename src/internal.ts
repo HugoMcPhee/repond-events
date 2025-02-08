@@ -1,23 +1,35 @@
 import { breakableForEach, forEach } from "chootils/dist/loops";
-import { AllState, ItemState, addItem, getItemWillExist, getState, onNextTick, removeItem, setState } from "repond";
-import { getChainState, getLiveEventState } from "./helpers";
+import {
+  AllState,
+  ItemState,
+  addItem,
+  getItemIds,
+  getItemWillExist,
+  getState,
+  onNextTick,
+  removeItem,
+  setState,
+  whenSettingStates,
+} from "repond";
 import { repondEventsMeta as meta, repondEventsMeta } from "./meta";
 import {
-  EventInstance,
-  EventInstanceOptions,
-  EventInstanceWithIds,
-  EventNodeLoose,
+  EventBlock,
+  EventBlockBase,
+  EventBlockOptions,
+  EventBlockTuple,
+  EventBlockWithIds,
   EventRunLiveInfo,
-  EventTuple,
   EventTypeDefinition,
+  ParamMap,
   RunMode,
   RunModeExtraOptions,
 } from "./types";
+import { evaluateParams } from "./valueHelpers";
 
 export function getElapsedTime(liveId?: string) {
   let foundElapsedTimeStatePath = meta.defaultElapsedTimePath;
   if (liveId) {
-    const liveEventElapsedTimePath = getLiveEventState(liveId)?.elapsedTimePath;
+    const liveEventElapsedTimePath = getState("liveEvents", liveId)?.elapsedTimePath;
     foundElapsedTimeStatePath = liveEventElapsedTimePath ?? foundElapsedTimeStatePath;
   }
 
@@ -25,12 +37,12 @@ export function getElapsedTime(liveId?: string) {
   const [itemType, itemId, itemProp] = foundElapsedTimeStatePath;
 
   // Using any since the item type is dynamic
-  const foundElapsedTime = (getState() as any)[itemType]?.[itemId]?.[itemProp] as number | undefined;
+  const foundElapsedTime = (getState(itemType, itemId) as any)?.[itemProp] as number | undefined;
   if (!foundElapsedTime) return console.warn("no elapsedTime state found for ", itemType, itemId, itemProp), 0;
   return foundElapsedTime;
 }
 
-export function eventTupleToEventInstance(eventTuple: EventTuple): EventInstance {
+export function eventTupleToEventBlock(eventTuple: EventBlockTuple): EventBlock {
   return {
     group: eventTuple[0],
     name: eventTuple[1],
@@ -39,32 +51,37 @@ export function eventTupleToEventInstance(eventTuple: EventTuple): EventInstance
   };
 }
 
-export function eventTuplesToEventInstances(eventTuples: EventTuple[]): EventInstance[] {
-  return eventTuples.map(eventTupleToEventInstance);
+export function toEventBlockIfNeeded(event: EventBlockTuple | EventBlock): EventBlock {
+  return Array.isArray(event) ? eventTupleToEventBlock(event) : event;
 }
 
-export function getLiveIdsForGroup(state: AllState, group: string) {
-  const allLiveEventIds = Object.keys(state.liveEvents);
-  return allLiveEventIds.filter((liveId) => state.liveEvents[liveId]?.event.group === group);
+export function eventTuplesToEventBlocks(eventTuples: (EventBlockTuple | EventBlock)[]): EventBlock[] {
+  // return eventTuples.map(eventTupleToEventBlock);
+  return eventTuples.map(toEventBlockIfNeeded);
 }
 
-export function getLiveEventsIdsUpToLiveEventId(state: AllState, liveId: string) {
-  const chainId = getChainIdFromLiveEventId(state, liveId);
+export function getLiveIdsForGroup(group: string) {
+  const allLiveEventIds = getItemIds("liveEvents");
+  return allLiveEventIds.filter((liveId) => getState("liveEvents", liveId)?.event.group === group);
+}
+
+export function getLiveEventsIdsUpToLiveEventId(liveId: string) {
+  const chainId = getChainIdFromLiveEventId(liveId);
   // `no chain found for ${liveId}`
   if (!chainId) return [];
-  const chainState = state.chains[chainId];
+  const chainState = getState("chains", chainId);
   const liveIds = chainState?.liveEventIds ?? [];
   const eventIndex = liveIds.indexOf(liveId);
   if (eventIndex === -1) return console.warn(`no event found for ${liveId}`), [];
   return liveIds.slice(0, eventIndex + 1);
 }
 
-export function findFirstNonActiveEventIndex(state: AllState, liveEventIds: string[]): number {
+export function findFirstNonActiveEventIndex(liveEventIds: string[]): number {
   if (liveEventIds.length === 0) {
     return 0; // If the list is empty, return 0
   }
 
-  const firstEventState = state.liveEvents?.[liveEventIds[0]!];
+  const firstEventState = getState("liveEvents", liveEventIds[0]!);
   const firstEventCanStart = firstEventState?.nowRunMode === "add";
   if ((!firstEventState || !firstEventState.isParallel) && firstEventCanStart) {
     return 1; // If the first event is not parallel, immediately return 1
@@ -73,7 +90,7 @@ export function findFirstNonActiveEventIndex(state: AllState, liveEventIds: stri
 
   // If the first event is parallel, find the first non-parallel event, or non ready to start parallel event
   for (let i = 1; i < liveEventIds.length; i++) {
-    const eventState = state.liveEvents?.[liveEventIds[i]!];
+    const eventState = getState("liveEvents", liveEventIds[i]!);
     const eventCanStart = eventState?.nowRunMode === "add";
     if (!eventState || (!eventState.isParallel && eventCanStart) || (eventState?.isParallel && !eventCanStart)) {
       return i; // Return the 0-based index of the first non-parallel event
@@ -84,23 +101,23 @@ export function findFirstNonActiveEventIndex(state: AllState, liveEventIds: stri
   return firstEventCanStart ? liveEventIds.length : 0;
 }
 
-export function getActiveEventIds(state: AllState, liveEventIds: string[]): string[] {
-  const index = findFirstNonActiveEventIndex(state, liveEventIds);
+export function getActiveEventIds(liveEventIds: string[]): string[] {
+  const index = findFirstNonActiveEventIndex(liveEventIds);
   // If index is 0, no events are active, otherwise slice up to index
   return index === 0 ? [] : liveEventIds.slice(0, index);
 }
 
-function getInsertEventIdsAfterActive(state: AllState, liveEventIds: string[], newEventIds: string[]): string[] {
-  const index = findFirstNonActiveEventIndex(state, liveEventIds);
+function getInsertEventIdsAfterActive(liveEventIds: string[], newEventIds: string[]): string[] {
+  const index = findFirstNonActiveEventIndex(liveEventIds);
   return [...liveEventIds.slice(0, index), ...newEventIds, ...liveEventIds.slice(index)];
 }
 
-export function getChainIdFromLiveEventId(state: AllState, liveId: string) {
+export function getChainIdFromLiveEventId(liveId: string) {
   // find the chainId from the liveId, then skip the chain
   let foundChainId: string | undefined;
-  const allChainIds = Object.keys(state.chains);
+  const allChainIds = getItemIds("chains");
   breakableForEach(allChainIds, (chainId) => {
-    const chainState = getState().chains[chainId];
+    const chainState = getState("chains", chainId);
     if (chainState?.liveEventIds.includes(liveId)) {
       foundChainId = chainId;
       return true; // break from the loop
@@ -113,8 +130,9 @@ export function getNewChainId() {
   return `chain_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 }
 
-export function runEventHandler(liveEventId: string) {
-  const liveEventState = getLiveEventState(liveEventId);
+// TODO maybe update the name to runLiveEventHandler because of isFast handling running events differently
+export async function runEventHandler(liveEventId: string) {
+  const liveEventState = getState("liveEvents", liveEventId);
   if (!liveEventState) return console.warn(`no liveEvent found for ${liveEventId}`);
 
   const { nowRunMode: runMode } = liveEventState;
@@ -151,6 +169,7 @@ export function runEventHandler(liveEventId: string) {
     runBy: "repond-events",
     addedBy: liveEventState.addedBy ?? "unknown",
     runMode,
+    isFast: false, // TODO Support isFast, It might not ever be true in this part
     didStart: (liveEventState.startTime ?? 0) > 0, // a little different to isActive, if it started at all?
     chainId: liveEventState.chainId,
     liveId: liveEventState.id,
@@ -173,32 +192,51 @@ export function runEventHandler(liveEventId: string) {
     goalEndTime: liveEventState.goalEndTime ?? 0,
   };
 
-  const paramsWithDefaults = { ...eventTypeDefinition.defaultParams, ...liveEventState.event.params };
+  const paramsWithDefaults = { ...eventTypeDefinition.params, ...liveEventState.event.params };
+
+  // If the event doesn't have evaluatedParams in state, evaluate them
+  // If the run mode is "run", and it's the first time the event is run, re-evaluate the params
+
+  let evaluatedParams: ParamMap | undefined | null = liveEventState.evaluatedParams;
+
+  if (!evaluatedParams || (runMode === "start" && liveInfo.isFirstStart)) {
+    evaluatedParams = await evaluateParams(paramsWithDefaults, {
+      addedBy: liveInfo.addedBy,
+      runBy: liveInfo.runBy,
+      parentChainId: liveInfo.chainId,
+      valueIdBase: liveInfo.liveId,
+    });
+  }
 
   // Run the event handler
-  eventHandler(paramsWithDefaults, liveInfo);
+  if (evaluatedParams) {
+    eventHandler(evaluatedParams, liveInfo);
+    setState(`liveEvents.evaluatedParams`, evaluatedParams, liveEventId);
+  } else {
+    console.warn(
+      `no evaluatedParams found for ${liveEventId} , ${eventTypeDefinition.group}.${eventTypeDefinition.name}`
+    );
+  }
 }
 
 export function finalizeEvent(liveEventId: string) {
-  setState(
-    (state) => {
-      const liveEventState = state.liveEvents[liveEventId];
-      if (!liveEventState) return console.warn(`no liveEvent found for ${liveEventId}`), {};
-      const chainId = liveEventState.chainId;
-      if (!chainId) return {}; // `no chain found for ${liveEventId}`
-      const chainState = state.chains[chainId];
-      if (!chainState) return {}; // `no chain found for ${chainId}`
+  whenSettingStates(() => {
+    const liveEventState = getState("liveEvents", liveEventId);
+    if (!liveEventState) return console.warn(`no liveEvent found for ${liveEventId}`), {};
+    const chainId = liveEventState.chainId;
+    if (!chainId) return {}; // `no chain found for ${liveEventId}`
+    const chainState = getState("chains", chainId);
+    if (!chainState) return {}; // `no chain found for ${chainId}`
 
-      // Remove this liveEventId from the chain
-      const newLiveEventIds = chainState.liveEventIds.filter((id) => id !== liveEventId);
-      return { chains: { [chainId]: { liveEventIds: newLiveEventIds } } };
-    },
-    () => removeItem({ type: "liveEvents", id: liveEventId })
-  );
+    // Remove this liveEventId from the chain
+    const newLiveEventIds = chainState.liveEventIds.filter((id) => id !== liveEventId);
+    setState(`chains.liveEventIds`, newLiveEventIds, chainId);
+  });
+  onNextTick(() => removeItem("liveEvents", liveEventId));
 }
 
-function _makeLiveEventStateFromEvent(event: EventInstanceWithIds): ItemState<"liveEvents"> {
-  const { chainId, liveId, addedBy, isParallel, timePath, hasPriority, duration } = event.options;
+function _makeLiveEventStateFromEvent(event: EventBlockWithIds): ItemState<"liveEvents"> {
+  const { chainId, liveId, addedBy, isParallel, timePath, hasPriority, duration, parentChainId } = event.options;
 
   const eventType = getEventTypeDefinition(event.group, event.name);
   let foundElapsedTime = 0;
@@ -206,7 +244,7 @@ function _makeLiveEventStateFromEvent(event: EventInstanceWithIds): ItemState<"l
   if (foundElapsedTimeStatePath) {
     const [itemType, itemId, itemProp] = foundElapsedTimeStatePath;
     // Using any since the item type is dynamic
-    foundElapsedTime = ((getState() as any)[itemType]?.[itemId]?.[itemProp] as number | undefined) ?? 0;
+    foundElapsedTime = ((getState(itemType, itemId) as any)?.[itemProp] as number | undefined) ?? 0;
   }
 
   // Finish instantly by default, can set to Infinity for no automatic end
@@ -223,6 +261,7 @@ function _makeLiveEventStateFromEvent(event: EventInstanceWithIds): ItemState<"l
     duration: duration ?? null,
     addedBy: addedBy ?? null,
     chainId,
+    parentChainId,
     event,
     addTime: Date.now(),
     readyTime: null,
@@ -239,7 +278,7 @@ function _makeLiveEventStateFromEvent(event: EventInstanceWithIds): ItemState<"l
   };
 }
 
-export function _makeLiveIdFromEventInstance(event: EventInstance) {
+export function _makeLiveIdFromEventBlock(event: EventBlock) {
   const { chainId, liveId, addedBy } = event.options;
 
   return (
@@ -254,17 +293,9 @@ export function makeNewChainId() {
   return `chain_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 }
 
-export function eventInstanceToEventNode(eventInstance: EventInstance): EventNodeLoose {
+export function eventBlockBaseToEventBlock(eventBlockBase: EventBlockBase, options?: EventBlockOptions): EventBlock {
   return {
-    group: eventInstance.group,
-    name: eventInstance.name,
-    params: eventInstance.params,
-  };
-}
-
-export function eventNodeToEventInstance(eventNode: EventNodeLoose, options?: EventInstanceOptions): EventInstance {
-  return {
-    ...eventNode,
+    ...eventBlockBase,
     options: options ?? {},
   };
 }
@@ -273,14 +304,124 @@ export function getEventTypeDefinition(group: string, name: string) {
   return meta.allEventTypeGroups[group]?.[name] as EventTypeDefinition<any>;
 }
 
-export function _addEvents(eventIntances: EventInstance[], options: EventInstanceOptions) {
-  const liveId = options.liveId;
-  const chainId = liveId ?? options.chainId ?? repondEventsMeta.defaultChainId ?? makeNewChainId();
+// Meant to be used for fast mode
+// in a loop until the chain is finished
+async function runEventFastMode(event: EventBlock, options: EventBlockOptions) {
+  // Finds and runs the event handler for the event
+  // it will always run immediately
+
+  const { chainId } = options;
+  if (!chainId) return console.warn(`no chainId found for fast ${event.group}.${event.name}`), {};
+
+  const eventTypeDefinition = meta.allEventTypeGroups[event.group]?.[event.name];
+  const eventHandler = eventTypeDefinition.run;
+
+  // let evaluatedParams: ParamMap | undefined | null = liveEventState.evaluatedParams;
+  const paramsWithDefaults = { ...eventTypeDefinition.params, ...event.params };
+
+  const evaluatedParams = await evaluateParams(paramsWithDefaults, {
+    addedBy: options.addedBy,
+    runBy: "repond-events",
+    parentChainId: options.parentChainId,
+    valueIdBase: chainId,
+  });
+
+  const liveInfo: EventRunLiveInfo = {
+    runBy: "repond-events",
+    addedBy: "unknown", // TODO maybe add addedBy for fast mode
+    runMode: "start",
+    isFast: true,
+    didStart: true,
+    chainId: chainId,
+    liveId: "unknown", // NOTE no live id in fast mode
+    remainingTime: 0,
+    elapsedTime: 0,
+    isUnpausing: false,
+    isUnsuspending: false,
+    isUnfreezing: false,
+    isFreezing: false,
+    isFirstAdd: true,
+    isFirstStart: true,
+    isFirstPause: false,
+    isFirstSuspend: false,
+    addTime: Date.now(),
+    startTime: Date.now(),
+    pauseTime: 0,
+    unpauseTime: 0,
+    suspendTime: 0,
+    unsuspendTime: 0,
+    goalEndTime: Date.now(),
+  };
+
+  await eventHandler(event.params, liveInfo);
+}
+
+export function _addEvents(eventBlocks: EventBlock[], listOptions: EventBlockOptions) {
+  // If the parents liveEventId is provided, then it creates a chain with the same id, which makes it a subChain
+  // This means the event will automatically finish when the subchain finishes
+  const liveId = listOptions.liveId;
+  const chainId = liveId ?? listOptions.chainId ?? repondEventsMeta.defaultChainId ?? makeNewChainId();
+
+  const parentChainId = listOptions.parentChainId;
+
+  const isFast = listOptions.isFast ?? false;
 
   const isForSubChain = !!liveId;
 
-  const addTheEvents = () => {
-    const events = eventIntances.map((event) => {
+  // If it's fast mode, it will run the events immediately
+  // and not add live events to the state
+  if (isFast) {
+    console.warn("fast mode not supported yet for _addEvents");
+    const fastChainMeta = repondEventsMeta.fastChain;
+
+    // If the parent chain is not a fast chain, then set up the new fastChain meta info
+    const parentChainIsFast = parentChainId ? !!fastChainMeta.nowFastChainsInfoMap[parentChainId] : false;
+
+    // If its the first fast chain, set the root fast chain id
+    if (!parentChainIsFast) {
+      fastChainMeta.nowRootFastChainId = chainId;
+      fastChainMeta.nowRootFastChainParentId = parentChainId;
+      fastChainMeta.nowFastChainsInfoMap = {};
+      fastChainMeta.nowFastChainsInfoMap[chainId] = {
+        nowChildFastChainId: undefined,
+        isCanceled: false,
+        parentFastChainId: undefined,
+        variablesMap: {},
+      };
+    } else {
+      // If the parent chain is a fast chain, then set up the new fastChain meta info
+      if (parentChainId) {
+        const parentFastChainInfo = fastChainMeta.nowFastChainsInfoMap[parentChainId];
+        parentFastChainInfo.nowChildFastChainId = chainId;
+      }
+      fastChainMeta.nowFastChainsInfoMap[chainId] = {
+        nowChildFastChainId: undefined,
+        isCanceled: false,
+        parentFastChainId: parentChainId,
+        variablesMap: {},
+      };
+    }
+
+    // Run through all the events in fast mode, while the chain isn't canceled
+    for (const event of eventBlocks) {
+      if (fastChainMeta.nowFastChainsInfoMap[chainId].isCanceled) {
+        break;
+      }
+      runEventFastMode(event, listOptions);
+    }
+
+    // If it's the first fast chain, when it finishes, clear the fast chain meta info
+    if (!parentChainIsFast) {
+      fastChainMeta.nowRootFastChainId = undefined;
+      fastChainMeta.nowRootFastChainParentId = undefined;
+      fastChainMeta.nowFastChainsInfoMap = {};
+    }
+
+    return chainId;
+  }
+
+  const addTheLiveEvents = () => {
+    const events = eventBlocks.map((event) => {
       const eventType = getEventTypeDefinition(event.group, event.name);
       if (!eventType) {
         console.warn(`no eventType found for ${event.group}.${event.name}`);
@@ -289,14 +430,14 @@ export function _addEvents(eventIntances: EventInstance[], options: EventInstanc
       return {
         ...event,
         options: {
-          ...options,
+          ...listOptions,
           liveId: undefined,
           ...event.options,
-          addedBy: event.options.addedBy ?? options?.addedBy,
-          isParallel: event.options.isParallel ?? options?.isParallel ?? eventType?.isParallel,
+          addedBy: event.options?.addedBy ?? listOptions?.addedBy,
+          isParallel: event.options?.isParallel ?? listOptions?.isParallel ?? eventType?.isParallel,
           chainId, // NOTE the chainId is always the same for all events added at once
-          timePath: event.options.timePath ?? options.timePath ?? eventType?.timePath,
-          duration: event.options.duration ?? options.duration ?? eventType?.duration,
+          timePath: event.options?.timePath ?? listOptions.timePath ?? eventType?.timePath,
+          duration: event.options?.duration ?? listOptions.duration ?? eventType?.duration,
         },
       };
     });
@@ -304,7 +445,7 @@ export function _addEvents(eventIntances: EventInstance[], options: EventInstanc
     const chainDoesntExist = !getItemWillExist("chains", chainId);
 
     // Check if the parent liveEvent is already running
-    const existingParentLiveEventForSubChain = liveId ? getState().liveEvents[liveId] : null;
+    const existingParentLiveEventForSubChain = liveId ? getState("liveEvents", liveId) : null;
     const parentLiveEventRunMode = existingParentLiveEventForSubChain?.nowRunMode ?? null;
     const parentLiveEventHasNonAddRunMode = liveId ? parentLiveEventRunMode && parentLiveEventRunMode !== "add" : false;
 
@@ -318,14 +459,15 @@ export function _addEvents(eventIntances: EventInstance[], options: EventInstanc
         canAutoActivate = true;
       }
 
-      const newChainState: ItemState<"chains"> = { id: chainId, liveEventIds: [], canAutoActivate };
-      addItem({ id: chainId, type: "chains", state: newChainState }, () => {});
+      // TODO needs parentChainId
+      const newChainState: ItemState<"chains"> = { id: chainId, liveEventIds: [], canAutoActivate, parentChainId };
+      addItem("chains", chainId, newChainState);
     }
 
-    const newDuplicateLiveEventsMap: Record<string, EventInstance> = {};
+    const newDuplicateLiveEventsMap: Record<string, EventBlock> = {};
 
     const eventsWithoutDuplicates = events.filter((event) => {
-      const liveId = event.options.liveId ?? _makeLiveIdFromEventInstance(event);
+      const liveId = event.options.liveId ?? _makeLiveIdFromEventBlock(event);
       if (getItemWillExist("liveEvents", liveId)) {
         newDuplicateLiveEventsMap[liveId] = event;
         return false;
@@ -336,97 +478,96 @@ export function _addEvents(eventIntances: EventInstance[], options: EventInstanc
     const newLiveIds = [] as string[];
     eventsWithoutDuplicates.forEach((event, index) => {
       const eventOptions = event.options;
-      const chainId = options.chainId ?? eventOptions.chainId; // NOTE I think this aleways has to be the same
+      const chainId = listOptions.chainId ?? eventOptions.chainId; // NOTE I think this aleways has to be the same
       if (!chainId) return console.warn(`no chainId found for ${event.group}.${event.name}`), {};
       const eventWithNewOptions = { ...event, options: { ...event.options, chainId } };
-      const liveId = eventOptions.liveId ?? _makeLiveIdFromEventInstance(eventWithNewOptions);
+      const liveId = eventOptions.liveId ?? _makeLiveIdFromEventBlock(eventWithNewOptions);
       newLiveIds.push(liveId);
       const eventWithLiveId = { ...eventWithNewOptions, options: { ...eventWithNewOptions.options, liveId } };
-      addItem({ id: liveId, type: "liveEvents", state: _makeLiveEventStateFromEvent(eventWithLiveId) });
+      addItem("liveEvents", liveId, _makeLiveEventStateFromEvent(eventWithLiveId));
     });
 
-    setState((state) => {
-      const chainState = state.chains[chainId];
+    whenSettingStates(() => {
+      const chainState = getState("chains", chainId);
 
       // NOTE make sure the chain is added before setting the chain state
       if (!chainState) return console.warn(`chain ${chainId} doesn't exist`), {};
 
       const nowChainEventIds = chainState.liveEventIds;
-      const newChainEventIds = options.hasPriority
-        ? getInsertEventIdsAfterActive(state, nowChainEventIds, newLiveIds)
+      const newChainEventIds = listOptions.hasPriority
+        ? getInsertEventIdsAfterActive(nowChainEventIds, newLiveIds)
         : [...nowChainEventIds, ...newLiveIds];
 
-      const newPartialChainState: Record<string, Partial<ItemState<"chains">>> = {
-        [chainId]: {
-          liveEventIds: newChainEventIds,
-          duplicateEventsToAdd: { ...chainState.duplicateEventsToAdd, ...newDuplicateLiveEventsMap },
-        },
-      };
-      const newPartialLiveEventsState: Record<string, Partial<ItemState<"liveEvents">>> = {};
+      setState("chains.liveEventIds", newChainEventIds, chainId);
+      setState(
+        "chains.duplicateEventsToAdd",
+        { ...chainState.duplicateEventsToAdd, ...newDuplicateLiveEventsMap },
+        chainId
+      );
 
       // If events are added to a subChain, set the goalEndTime for the parent event to Infinity, to wait for the subChain to finish
       if (isForSubChain) {
-        newPartialLiveEventsState[chainId] = { goalEndTime: Infinity };
+        setState("liveEvents.goalEndTime", Infinity, chainId);
         if (parentLiveEventHasNonAddRunMode && parentLiveEventRunMode !== "start") {
-          forEach(newChainEventIds, (liveId) => (newPartialLiveEventsState[liveId] = { nowRunMode: "add" }));
+          forEach(newChainEventIds, (liveId) => {
+            setState("liveEvents.nowRunMode", "add", liveId);
+          });
         }
       }
 
       const liveEventsToCancel = Object.keys(chainState.duplicateEventsToAdd);
       liveEventsToCancel.forEach((liveId) => {
         const event = chainState.duplicateEventsToAdd[liveId];
-        const eventState = state.liveEvents[liveId];
-        if (!eventState) return console.warn(`no liveEvent found for ${liveId}`), {};
-        newPartialLiveEventsState[liveId] = { nowRunMode: "cancel" };
+        const eventState = getState("liveEvents", liveId);
+        if (!eventState) return console.warn(`no liveEvent found for ${liveId}`);
+        setState("liveEvents.nowRunMode", "cancel", liveId);
       });
-
-      return { chains: newPartialChainState, liveEvents: newPartialLiveEventsState };
     });
   };
   if (isForSubChain && getItemWillExist("liveEvents", liveId)) {
     // If its a subChain, add it immediately, since the parent liveEvent is already running
-    addTheEvents();
+    addTheLiveEvents();
   } else {
-    onNextTick(addTheEvents);
+    onNextTick(addTheLiveEvents);
   }
   return chainId;
 
   // NOTE events are auto started by the chain after the liveEventIds are set
 }
 
-export function _addEvent(event: EventNodeLoose, options: EventInstanceOptions) {
-  const eventInstance: EventInstance = { ...event, options };
-  const newChainId = _addEvents([eventInstance], { ...options, liveId: undefined }); // remove the liveId options for all the events, otherwise they will be counted as sub events
+export function _addEvent(event: EventBlockBase, options: EventBlockOptions) {
+  const eventBlock: EventBlock = { ...event, options };
+  const newChainId = _addEvents([eventBlock], { ...options, liveId: undefined }); // remove the liveId options for all the events, otherwise they will be counted as sub events
   return newChainId;
 }
 
-export function _getStatesToRunEventsInMode({
-  state,
+export function _setStatesToRunEventsInMode({
   runMode,
   targetLiveIds,
   chainId,
   runOptions,
 }: {
-  state: AllState;
   runMode: RunMode;
   chainId?: string;
   targetLiveIds?: string[];
   runOptions?: RunModeExtraOptions;
 }) {
+  const runOptionKeys = Object.keys(runOptions ?? {});
+
   const foundSubChains: string[] = [];
   const liveIdsByChain: Record<string, string[]> = {};
   let allFoundLiveIds = targetLiveIds ?? [];
   if (chainId && targetLiveIds) {
     liveIdsByChain[chainId] = [...targetLiveIds];
   } else if (chainId && !targetLiveIds) {
-    const chainState = state.chains[chainId];
+    const chainState = getState("chains", chainId);
     targetLiveIds = chainState?.liveEventIds;
     allFoundLiveIds = targetLiveIds ?? [];
     if (!targetLiveIds) return {}; // `no liveEventIds found for chain ${chainId}`
     liveIdsByChain[chainId] = [...targetLiveIds];
   } else if (!chainId && targetLiveIds) {
     for (const liveId of targetLiveIds) {
-      const chainId = getChainIdFromLiveEventId(state, liveId);
+      const chainId = getChainIdFromLiveEventId(liveId);
       if (!chainId) return {}; // `no chain found for ${liveId}`
       if (!liveIdsByChain[chainId]) liveIdsByChain[chainId] = [];
       liveIdsByChain[chainId]!.push(liveId);
@@ -440,50 +581,38 @@ export function _getStatesToRunEventsInMode({
 
   // add the liveIds of the subChains
   for (const subChainId of foundSubChains) {
-    const subChainState = state.chains[subChainId];
+    const subChainState = getState("chains", subChainId);
     const subChainLiveIds = subChainState?.liveEventIds;
     if (!subChainLiveIds) return {}; // `no liveEventIds found for chain ${subChainId}`
     liveIdsByChain[subChainId] = [...subChainLiveIds];
   }
 
   const foundChainIds = Object.keys(liveIdsByChain);
-  const newPartialLiveEventsState: Record<string, Partial<ItemState<"liveEvents">>> = {};
-  const newPartialChainsState: Record<string, Partial<ItemState<"chains">>> = {};
+  // const newPartialLiveEventsState: Record<string, Partial<ItemState<"liveEvents">>> = {};
 
   for (const chainId of foundChainIds) {
     let targetChainLiveIdsUnordered = liveIdsByChain[chainId];
-    const nowChainLiveIds = state.chains[chainId]?.liveEventIds;
+    const nowChainLiveIds = getState("chains", chainId)?.liveEventIds;
 
     if (!nowChainLiveIds || !targetChainLiveIdsUnordered) continue;
     // get the liveIds that are in the chain and also in the liveIds array in order, or all if liveIds is not set
     const targetChainLiveIds = nowChainLiveIds.filter((liveId) => targetChainLiveIdsUnordered.includes(liveId));
-    let newChainLiveEventIds = [...nowChainLiveIds];
 
     for (const liveEventId of targetChainLiveIds) {
-      const liveEventState = state.liveEvents[liveEventId];
+      const liveEventState = getState("liveEvents", liveEventId);
       if (runMode === "skip") {
-        newPartialLiveEventsState[liveEventId] = { runModeOptionsWhenReady: { runMode, ...runOptions } };
+        // newPartialLiveEventsState[liveEventId] = { runModeOptionsWhenReady: { runMode, ...runOptions } };
+        setState("liveEvents.runModeOptionsWhenReady", { runMode, ...runOptions }, liveEventId);
       } else {
-        newPartialLiveEventsState[liveEventId] = { nowRunMode: runMode, ...runOptions };
+        // newPartialLiveEventsState[liveEventId] = { nowRunMode: runMode, ...runOptions };
+        setState("liveEvents.nowRunMode", runMode, liveEventId);
       }
-
-      // If the new runMode is "cancel", remove it from the chain, if it wasn't started yet
-      // NOTE original idea was to also check if it started, so other events wait for it, but removing it instantly might be better
-      if (runMode === "cancel") {
-        const index = newChainLiveEventIds.indexOf(liveEventId);
-        if (index > -1) newChainLiveEventIds.splice(index, 1);
+      // Add the extra run optinos to the items state
+      if (runOptions) {
+        forEach(runOptionKeys, (key) => setState(`liveEvents.${key}`, runOptions[key], liveEventId));
       }
-      // The liveEvent will remove itself from repond state if it was cancled or finished
     }
-    const loopedChainIsSubChain = getItemWillExist("liveEvents", chainId);
-    // if the chain is a subChain, and any of the child live events were changed to something other than "add", set canAutoActivate to true
-    let newCanAutoActivate = state.chains[chainId]?.canAutoActivate;
-    if (loopedChainIsSubChain) {
-      newCanAutoActivate = targetChainLiveIds.some((id: string) => newPartialLiveEventsState[id]!.nowRunMode !== "add");
-    }
-
-    // newPartialChainsState[chainId] = { liveEventIds: newChainLiveEventIds, canAutoActivate: newCanAutoActivate };
   }
 
-  return { liveEvents: newPartialLiveEventsState, chains: newPartialChainsState };
+  // return { liveEvents: newPartialLiveEventsState };
 }

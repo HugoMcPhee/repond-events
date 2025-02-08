@@ -2,6 +2,7 @@ export type UnsetEmojiKeysType = Record<string, string>;
 
 export interface RepondEventsTypesUntyped<T_Group, T_Event, T_GenericParamA> {
   EventGroups: Record<string, Record<string, any>>;
+  ValueGroups: Record<string, Record<string, any>>;
   KnownChainIds: string;
   EventParameters: any; // to type event parameter with dependant types
   EmojiKeys: UnsetEmojiKeysType;

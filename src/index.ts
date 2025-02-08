@@ -2,14 +2,11 @@ import { chainEffects } from "./effects/chains";
 import { liveEventEffects, liveEventParamEffects } from "./effects/liveEvents";
 import { chainsStore } from "./stores/chains";
 import { liveEventsStore } from "./stores/liveEvents";
+
 export {
   todo,
   todo as II, // as an easy-to-read alias for todo
   todo as E, // as an easy-to-read alias for todo (Event)
-  getChainState,
-  getLiveEventState,
-  setLiveEventState,
-  setChainState,
   runEvent,
   runPriorityEvent,
   runEvents,
@@ -26,16 +23,21 @@ export {
   MakeEventType,
   makeEventTypes,
   initEventTypeGroups,
+  makeValueTypes,
+  initValueTypeGroups,
+  makeValue,
+  makeValue as I_, // as an easy-to-read alias for makeValue
+  makeValue as V, // as an easy-to-read alias for makeValue
 } from "./helpers";
+export { basicValues } from "./events/values/basic";
+export { basicEvents } from "./events/basic";
 
 export type {
   ChainId,
-  EventInstance,
-  EventInstanceOptions,
-  EventNodeLoose,
-  EventNodeLooseWithOptions,
+  EventBlockBase,
+  EventBlock,
+  EventBlockOptions,
   EventRunLiveInfo,
-  EasyEventInstance,
   RunModeExtraOptions,
   RunModeOptions,
   KnownChainId,
@@ -43,10 +45,12 @@ export type {
   EventGroupName,
   EventName,
   EventTypeDefinition,
-  EventTuple,
+  EventBlockTuple,
+  EventBlockTuple as EventTuple,
+  EventBlockTupleLoose,
   EventParams,
-  CustomEventParams,
-  DefaultEventParams,
+  CustomValueParams,
+  DefaultValueParams,
 } from "./types";
 
 export const repondEventsStores = {
