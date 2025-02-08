@@ -13,7 +13,7 @@ export const chainEffects = makeEffects((then) => ({
 
       // Remove the chain if there's no liveEventIds left in the chain
       if (firstLiveEventIds.length === 0) {
-        removeItem({ type: "chains", id: chainId });
+        removeItem("chains", chainId);
         // if there's a getEventValue that was waiting for a returnValue in the chain, but the chain ended,
         // return null for the chain
         repondEventsMeta.resolveValueMap[chainId]?.(undefined);

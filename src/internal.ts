@@ -232,7 +232,7 @@ export function finalizeEvent(liveEventId: string) {
     const newLiveEventIds = chainState.liveEventIds.filter((id) => id !== liveEventId);
     setState(`chains.liveEventIds`, newLiveEventIds, chainId);
   });
-  onNextTick(() => removeItem({ type: "liveEvents", id: liveEventId }));
+  onNextTick(() => removeItem("liveEvents", liveEventId));
 }
 
 function _makeLiveEventStateFromEvent(event: EventBlockWithIds): ItemState<"liveEvents"> {
@@ -461,7 +461,7 @@ export function _addEvents(eventBlocks: EventBlock[], listOptions: EventBlockOpt
 
       // TODO needs parentChainId
       const newChainState: ItemState<"chains"> = { id: chainId, liveEventIds: [], canAutoActivate, parentChainId };
-      addItem({ id: chainId, type: "chains", state: newChainState }, () => {});
+      addItem("chains", chainId, newChainState);
     }
 
     const newDuplicateLiveEventsMap: Record<string, EventBlock> = {};
@@ -484,7 +484,7 @@ export function _addEvents(eventBlocks: EventBlock[], listOptions: EventBlockOpt
       const liveId = eventOptions.liveId ?? _makeLiveIdFromEventBlock(eventWithNewOptions);
       newLiveIds.push(liveId);
       const eventWithLiveId = { ...eventWithNewOptions, options: { ...eventWithNewOptions.options, liveId } };
-      addItem({ id: liveId, type: "liveEvents", state: _makeLiveEventStateFromEvent(eventWithLiveId) });
+      addItem("liveEvents", liveId, _makeLiveEventStateFromEvent(eventWithLiveId));
     });
 
     whenSettingStates(() => {
