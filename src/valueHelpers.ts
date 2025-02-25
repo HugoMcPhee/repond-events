@@ -79,6 +79,7 @@ export function evaluateValueBlock(valueBlock: ValueBlock, valueRunInfo: ValueRu
   const paramsWithDefaults = { ...valueDefinition.params, ...valueBlock.params };
   const evaluatedParamsOrPromise = evaluateParams(paramsWithDefaults, paramsInfo);
 
+  // NOTE this won't be possible anymore, since there's no async values
   if (evaluatedParamsOrPromise instanceof Promise) {
     return evaluatedParamsOrPromise.then((evaluatedParams) => {
       const result = valueDefinition.run(evaluatedParams, valueRunInfo, valueBlock);

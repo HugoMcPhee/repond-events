@@ -1,5 +1,8 @@
 TODO
 
+- v0.3.1
+- Update repond to 1.1.0
+
 - v0.3.0
 - Use repond 1.0.1!
 - start adding values
