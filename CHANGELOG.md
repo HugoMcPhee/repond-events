@@ -1,5 +1,8 @@
 TODO
 
+- v0.3.2
+- Update repond to 1.2.0
+
 - v0.3.1
 - Update repond to 1.1.0
 

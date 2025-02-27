@@ -1,6 +1,6 @@
 {
   "name": "repond-events",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "events for repond",
   "_main": "src/index.ts",
   "_types": "src/index.ts",
@@ -31,7 +31,7 @@
     "chootils": "^0.3.9",
     "react": "^17.0.2",
     "typescript": "^5.1.6",
-    "repond": "^1.1.0"
+    "repond": "^1.2.0"
   },
   "prettier": {
     "printWidth": 120
