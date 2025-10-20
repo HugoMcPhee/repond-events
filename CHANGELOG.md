@@ -1,4 +1,5 @@
-TODO
+- v0.3.3
+- Critical fix for using non default elapsed time paths
 
 - v0.3.2
 - Update repond to 1.2.0

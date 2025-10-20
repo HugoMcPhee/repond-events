@@ -144,7 +144,7 @@ export async function runEventHandler(liveEventId: string) {
   if (!eventHandler)
     return console.warn(`no handler found for ${liveEventState.event.group}.${liveEventState.event.name}`);
 
-  const elapsedTime = getElapsedTime(liveEventState.chainId);
+  const elapsedTime = getElapsedTime(liveEventId);
 
   let relevantTimeProp: keyof AllState["liveEvents"][string] = "startTime";
 

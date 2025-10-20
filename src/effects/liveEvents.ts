@@ -84,7 +84,7 @@ export const liveEventEffects = makeEffects((then) => ({
             const { goalEndTime, pauseTime } = liveEventState;
             if (goalEndTime === null || pauseTime === null) return;
             const remainingTime = goalEndTime - pauseTime;
-            const elapsedTime = getElapsedTime(liveEventState.chainId);
+            const elapsedTime = getElapsedTime(liveId);
 
             setState(`liveEvents.goalEndTime`, elapsedTime + remainingTime, liveId);
             setState(`liveEvents.unpauseTime`, nowTime, liveId);
